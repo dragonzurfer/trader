@@ -37,11 +37,8 @@ type OptionLike interface {
 	GetUnderlyingSymbol() string
 }
 
-type OptionChainLike interface {
-	SortStrikeLowToHigh()
-	GetOptions() []OptionLike
-	GetExpiry() time.Time
-	GetUnderlyingSymbol() string
+type Expiry struct {
+	ExpiryDate time.Time
 }
 
 type BrokerLike interface {
@@ -49,5 +46,5 @@ type BrokerLike interface {
 	GetLTP(string) (float64, error)
 	GetMarketDepth(string) (BidAskLike, error)
 	GetCandles(string) ([]CandleLike, error)
-	GetOptionChain(string, string) OptionChainLike
+	GetOptionExpiries(string) []Expiry
 }
