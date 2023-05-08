@@ -23,6 +23,7 @@ type Trader struct {
 	PaperTradeFilePath        string
 	AccountTradeFilePath      string
 	ExecutorErrorFilePath     string
+	AccountDetailsFilePath    string
 	BrokerCredentialsFilePath string
 	Executor                  ExecutorLike
 }

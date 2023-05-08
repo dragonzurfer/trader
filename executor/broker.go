@@ -29,6 +29,13 @@ const (
 	PutOption  OptionType = "PE"
 )
 
+type TradeType string
+
+const (
+	Sell TradeType = "Sell"
+	Buy  TradeType = "Buy"
+)
+
 type OptionLike interface {
 	GetExpiry() time.Time
 	GetStrike() float64
@@ -39,6 +46,13 @@ type OptionLike interface {
 
 type Expiry struct {
 	ExpiryDate time.Time
+}
+
+type OptionPostionLike interface {
+	OptionLike
+	GetTradeType() TradeType
+	GetPrice() float64
+	GetQuantity() int64
 }
 
 type BrokerLike interface {
