@@ -60,5 +60,5 @@ type BrokerLike interface {
 	GetLTP(string) (float64, error)
 	GetMarketDepth(string) (BidAskLike, error)
 	GetCandles(string) ([]CandleLike, error)
-	GetOptionExpiries(string) []Expiry
+	GetOptionExpiries(string) ([]Expiry, error)
 }
