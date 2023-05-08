@@ -2,8 +2,6 @@ package executor
 
 import (
 	"time"
-
-	"github.com/dragonzurfer/trader/executor"
 )
 
 type MarketDepthLike interface {
@@ -65,6 +63,6 @@ type BrokerLike interface {
 	GetMarketDepth(string) (BidAskLike, error)
 	GetCandles(string) ([]CandleLike, error)
 	GetOptionExpiries(string) ([]Expiry, error)
-	GetMarketDepthOption(float64, time.Time, executor.OptionType) (BidAskLike, error)
-	GetCandlesOption(float64, time.Time, executor.OptionType) ([]CandleLike, error)
+	GetMarketDepthOption(float64, time.Time, OptionType) (BidAskLike, error)
+	GetCandlesOption(float64, time.Time, OptionType) ([]CandleLike, error)
 }
