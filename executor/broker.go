@@ -48,7 +48,7 @@ type Expiry struct {
 	ExpiryDate time.Time
 }
 
-type OptionPostionLike interface {
+type OptionPositionLike interface {
 	OptionLike
 	GetTradeType() TradeType
 	GetPrice() float64

@@ -5,6 +5,7 @@ import "time"
 type ExecutorLike interface {
 	SetBroker(*BrokerLike)
 	SetTradeFilePath(string)
+	SetSettingsFilesPath(string)
 	InTradingWindow() bool
 	InTrade() bool
 	IsEntrySatisfied() bool
@@ -14,6 +15,8 @@ type ExecutorLike interface {
 	IsError() bool
 	ReadErrors() []string
 	GetSleepDuration() time.Duration
+	PaperTrade(TradeType)
+	AccountTrade(TradeType)
 }
 
 type Trader struct {
@@ -23,7 +26,7 @@ type Trader struct {
 	PaperTradeFilePath        string
 	AccountTradeFilePath      string
 	ExecutorErrorFilePath     string
-	AccountDetailsFilePath    string
+	SettingsFilePath          string
 	BrokerCredentialsFilePath string
 	Executor                  ExecutorLike
 }
