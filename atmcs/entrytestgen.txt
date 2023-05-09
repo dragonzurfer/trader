@@ -179,8 +179,8 @@ func GenerateOptionPosition(strike float64, exp time.Time, optTyp executor.Optio
 var quantity int64
 
 func GenerateTrade(testCase TestCase, strike float64, optionType executor.OptionType, sellExpiry time.Time, buyExpiry time.Time, signal cpr.SignalValue) ExpectedTrade {
-	sellPrice := 97.0
-	buyPrice := 113.0
+	sellPrice := 130.0
+	buyPrice := 172.0
 	var sellOption, buyOption OptionPosition
 	if signal == cpr.Buy {
 		sellOption = GenerateOptionPosition(strike, sellExpiry, executor.PutOption, executor.Sell, sellPrice, quantity)
@@ -189,9 +189,9 @@ func GenerateTrade(testCase TestCase, strike float64, optionType executor.Option
 	}
 
 	if signal == cpr.Buy {
-		buyOption = GenerateOptionPosition(strike, buyExpiry, executor.CallOption, executor.Buy, buyPrice, quantity/2)
-	} else {
 		buyOption = GenerateOptionPosition(strike, buyExpiry, executor.PutOption, executor.Buy, buyPrice, quantity/2)
+	} else {
+		buyOption = GenerateOptionPosition(strike, buyExpiry, executor.CallOption, executor.Buy, buyPrice, quantity/2)
 	}
 	var expectedTrade ExpectedTrade
 	expectedTrade.EntryPositions = append(expectedTrade.EntryPositions, sellOption)
@@ -204,15 +204,14 @@ func GenerateTrade(testCase TestCase, strike float64, optionType executor.Option
 func main() {
 	LoadTimeLocation()
 	expiries := `
-	2023-05-11
-	2023-05-18
-	2023-05-25
-	2023-06-01
-	2023-06-08
-	2023-06-29
+	2023-12-18
+	2023-12-25
+	2024-01-01
+	2024-01-08
+	2024-01-29
 	`
 	gen_list := []Pair{
-		{97, 0.05},
+		// {97, 0.05},
 		{112, 1},
 		{130, 0.5},
 		{142, 3},
@@ -224,13 +223,13 @@ func main() {
 	quantity = 3600
 	testCase := TestCase{}
 	testCase.LTP = ltp
-	testCase.CurrentTime = time.Date(2023, 05, 01, 00, 00, 00, 00, ISTLocation)
+	testCase.CurrentTime = time.Date(2023, 12, 16, 00, 00, 00, 00, ISTLocation)
 	testCase.OptionExpiries = GenerateExpiries(expiries)
 	testCase.Signal = GenerateSignal(17150, 17100, 17200, cpr.Buy)
-	sellExpiry := testCase.OptionExpiries[0].ExpiryDate
-	buyExpiry := testCase.OptionExpiries[2].ExpiryDate
-	testCase.ExpectedTrade = GenerateTrade(testCase, 17200, executor.PutOption, sellExpiry, buyExpiry, testCase.Signal.Signal)
+	sellExpiry := testCase.OptionExpiries[1].ExpiryDate
+	buyExpiry := testCase.OptionExpiries[4].ExpiryDate
 	testCase.OptionDepths = GenerateDepths(gen_list, testCase.OptionExpiries)
+	testCase.ExpectedTrade = GenerateTrade(testCase, 17200, executor.PutOption, sellExpiry, buyExpiry, testCase.Signal.Signal)
 	saveTestCaseToFile("test_case.json", testCase)
 }
 
