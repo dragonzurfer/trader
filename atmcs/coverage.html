@@ -55,9 +55,9 @@
 			<div id="nav">
 				<select id="files">
 				
-				<option value="file0">trader/atmcs/atmcs.go (55.6%)</option>
+				<option value="file0">github.com/dragonzurfer/trader/atmcs/atmcs.go (55.6%)</option>
 				
-				<option value="file1">trader/atmcs/entry.go (69.2%)</option>
+				<option value="file1">github.com/dragonzurfer/trader/atmcs/entry.go (82.1%)</option>
 				
 				</select>
 			</div>
@@ -203,15 +203,15 @@ type OptionPosition struct {
         Quantity  int64
 }
 
-func (op OptionPosition) GetTradeType() executor.TradeType <span class="cov0" title="0">{ return op.TradeType }</span>
-func (op OptionPosition) GetPrice() float64                <span class="cov0" title="0">{ return op.Price }</span>
-func (op OptionPosition) GetQuantity() int64               <span class="cov0" title="0">{ return op.Quantity }</span>
+func (op OptionPosition) GetTradeType() executor.TradeType <span class="cov8" title="1">{ return op.TradeType }</span>
+func (op OptionPosition) GetPrice() float64                <span class="cov8" title="1">{ return op.Price }</span>
+func (op OptionPosition) GetQuantity() int64               <span class="cov8" title="1">{ return op.Quantity }</span>
 
 func (o Option) GetExpiry() time.Time               <span class="cov8" title="1">{ return o.Expiry }</span>
-func (o Option) GetStrike() float64                 <span class="cov0" title="0">{ return o.Strike }</span>
-func (o Option) GetOptionType() executor.OptionType <span class="cov0" title="0">{ return o.Type }</span>
-func (o Option) GetOptionSymbol() string            <span class="cov0" title="0">{ return o.Symbol }</span>
-func (o Option) GetUnderlyingSymbol() string        <span class="cov0" title="0">{ return o.UnderlyingSymbol }</span>
+func (o Option) GetStrike() float64                 <span class="cov8" title="1">{ return o.Strike }</span>
+func (o Option) GetOptionType() executor.OptionType <span class="cov8" title="1">{ return o.Type }</span>
+func (o Option) GetOptionSymbol() string            <span class="cov8" title="1">{ return o.Symbol }</span>
+func (o Option) GetUnderlyingSymbol() string        <span class="cov8" title="1">{ return o.UnderlyingSymbol }</span>
 
 func (obj *ATMcs) IsEntrySatisfied() bool <span class="cov0" title="0">{
         return true
@@ -224,15 +224,15 @@ func (obj *ATMcs) PaperTrade(tradeType executor.TradeType) <span class="cov8" ti
         }
 }</span>
 
-func (obj *ATMcs) makeEntryPositions(tradeType executor.TradeType) []executor.OptionLike <span class="cov8" title="1">{
+func (obj *ATMcs) makeEntryPositions(tradeType executor.TradeType) []executor.OptionPositionLike <span class="cov8" title="1">{
+
         ltp, err := obj.Broker.GetLTP(obj.Symbol)
         if err != nil </span><span class="cov0" title="0">{
                 log.Println(err.Error())
                 return nil
         }</span>
 
-        <span class="cov8" title="1">atmStrike := GetStrikeATM(ltp, obj.StrikeDiff)
-        strike := GetNearest100ITMStrike(atmStrike, tradeType)
+        <span class="cov8" title="1">strike := GetNearest100ITMStrike(ltp, tradeType)
 
         expiries, err := obj.Broker.GetOptionExpiries(obj.Symbol)
         if err != nil </span><span class="cov0" title="0">{
@@ -246,7 +246,7 @@ func (obj *ATMcs) makeEntryPositions(tradeType executor.TradeType) []executor.Op
                 return nil
         }</span>
 
-        <span class="cov8" title="1">buyExpiry, err := GetMonthlyExpiry(obj.GetCurrentTime(), expiries)
+        <span class="cov8" title="1">buyExpiry, err := GetMonthlyExpiryCalendarSpread(obj.GetCurrentTime(), sellExpiry.ExpiryDate, expiries)
         if err != nil </span><span class="cov0" title="0">{
                 log.Println(err.Error())
                 return nil
@@ -256,11 +256,11 @@ func (obj *ATMcs) makeEntryPositions(tradeType executor.TradeType) []executor.Op
 
         quantity := obj.Quantity
         var sellPosition, buyPosition OptionPosition
-        var entryPositions []executor.OptionLike
+        var entryPositions []executor.OptionPositionLike
         if tradeType == executor.Buy </span><span class="cov8" title="1">{
                 sellPosition = MakeEntryPosition(symbol, strike, sellExpiry, executor.PutOption, executor.Sell, quantity)
                 buyPosition = MakeEntryPosition(symbol, strike, buyExpiry, executor.PutOption, executor.Buy, quantity/2)
-        }</span> else<span class="cov0" title="0"> {
+        }</span> else<span class="cov8" title="1"> {
                 sellPosition = MakeEntryPosition(symbol, strike, sellExpiry, executor.CallOption, executor.Sell, quantity)
                 buyPosition = MakeEntryPosition(symbol, strike, buyExpiry, executor.CallOption, executor.Buy, quantity/2)
         }</span>
@@ -350,7 +350,7 @@ func GetExpiry(currentTime time.Time, minDaysToExpiry int64, strike float64, exp
         <span class="cov8" title="1">return earliestExpiry, err</span>
 }
 
-func GetMonthlyExpiry(currentTime time.Time, expiries []executor.Expiry) (executor.Expiry, error) <span class="cov8" title="1">{
+func GetMonthlyExpiryCalendarSpread(currentTime time.Time, sellExpiry time.Time, expiries []executor.Expiry) (executor.Expiry, error) <span class="cov8" title="1">{
         currentYear, currentMonth := currentTime.Year(), currentTime.Month()
 
         var lastExpiryOfCurrentMonth executor.Expiry
@@ -360,37 +360,40 @@ func GetMonthlyExpiry(currentTime time.Time, expiries []executor.Expiry) (execut
         nextMonth := currentMonth + 1
         nextYear := currentYear
 
-        if nextMonth &gt; 12 </span><span class="cov0" title="0">{
+        if nextMonth &gt; 12 </span><span class="cov8" title="1">{
                 nextMonth = 1
                 nextYear++
         }</span>
-
         <span class="cov8" title="1">for _, expiry := range expiries </span><span class="cov8" title="1">{
-                expiryYear, expiryMonth := expiry.ExpiryDate.Year(), expiry.ExpiryDate.Month()
+                if expiry.ExpiryDate.After(sellExpiry) </span><span class="cov8" title="1">{
 
-                if expiryYear == currentYear &amp;&amp; expiryMonth == currentMonth </span><span class="cov8" title="1">{
-                        lastExpiryOfCurrentMonth = expiry
-                        foundCurrentMonth = true
-                }</span> else<span class="cov8" title="1"> if expiryYear == nextYear &amp;&amp; expiryMonth == nextMonth </span><span class="cov8" title="1">{
-                        lastExpiryOfNextMonth = expiry
-                        foundNextMonth = true
-                }</span> else<span class="cov0" title="0"> if expiryYear &gt; nextYear || (expiryYear == nextYear &amp;&amp; expiryMonth &gt; nextMonth) </span><span class="cov0" title="0">{
-                        break</span>
+                        expiryYear, expiryMonth := expiry.ExpiryDate.Year(), expiry.ExpiryDate.Month()
+
+                        if expiryYear == currentYear &amp;&amp; expiryMonth == currentMonth </span><span class="cov8" title="1">{
+                                lastExpiryOfCurrentMonth = expiry
+                                foundCurrentMonth = true
+                        }</span> else<span class="cov8" title="1"> if expiryYear == nextYear &amp;&amp; expiryMonth == nextMonth </span><span class="cov8" title="1">{
+                                lastExpiryOfNextMonth = expiry
+                                foundNextMonth = true
+                        }</span> else<span class="cov0" title="0"> if expiryYear &gt; nextYear || (expiryYear == nextYear &amp;&amp; expiryMonth &gt; nextMonth) </span><span class="cov0" title="0">{
+                                break</span>
+                        }
                 }
         }
 
         <span class="cov8" title="1">if foundCurrentMonth </span><span class="cov8" title="1">{
                 return lastExpiryOfCurrentMonth, nil
-        }</span> else<span class="cov0" title="0"> if foundNextMonth </span><span class="cov0" title="0">{
+        }</span> else<span class="cov8" title="1"> if foundNextMonth </span><span class="cov8" title="1">{
                 return lastExpiryOfNextMonth, nil
         }</span> else<span class="cov0" title="0"> {
                 return executor.Expiry{}, errors.New("no suitable monthly expiry found")
         }</span>
 }
-func GetStrikeATM(ltp float64, strikeDiff float64) float64 <span class="cov8" title="1">{
+
+func GetStrikeATM(ltp float64, strikeDiff float64) float64 <span class="cov0" title="0">{
         return roundToNearestMultiple(ltp, strikeDiff)
 }</span>
-func roundToNearestMultiple(value, multiple float64) float64 <span class="cov8" title="1">{
+func roundToNearestMultiple(value, multiple float64) float64 <span class="cov0" title="0">{
         return multiple * math.Round(value/multiple)
 }</span>
 
@@ -399,18 +402,17 @@ func GetNearest100ITMStrike(ltp float64, tradeType executor.TradeType) float64 <
 
         switch tradeType </span>{
         case executor.Buy:<span class="cov8" title="1">
-                if closest100Multiple &lt; ltp </span><span class="cov0" title="0">{
+                if closest100Multiple &lt; ltp </span><span class="cov8" title="1">{
                         return closest100Multiple + 100
                 }</span>
                 <span class="cov8" title="1">return closest100Multiple</span>
-        case executor.Sell:<span class="cov0" title="0">
-                if closest100Multiple &gt; ltp </span><span class="cov0" title="0">{
+        case executor.Sell:<span class="cov8" title="1">
+                if closest100Multiple &gt; ltp </span><span class="cov8" title="1">{
                         return closest100Multiple - 100
                 }</span>
-                <span class="cov0" title="0">return closest100Multiple</span>
-        default:<span class="cov0" title="0">
-                panic("Invalid trade type")</span>
+                <span class="cov8" title="1">return closest100Multiple</span>
         }
+        <span class="cov0" title="0">return closest100Multiple</span>
 }
 
 func roundToNearest100Multiple(value float64) float64 <span class="cov8" title="1">{

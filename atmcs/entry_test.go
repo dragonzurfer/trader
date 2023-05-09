@@ -10,11 +10,10 @@ import (
 	"testing"
 	"time"
 
-	"trader/atmcs"
+	"github.com/dragonzurfer/trader/atmcs"
 
 	cpr "github.com/dragonzurfer/strategy/CPR"
 	"github.com/dragonzurfer/trader/executor"
-	"github.com/stretchr/testify/assert"
 )
 
 var ISTLocation *time.Location
@@ -146,14 +145,22 @@ func (b *TestBroker) GetCandlesOption(float64, time.Time, executor.OptionType) (
 func TestPaperTrade(t *testing.T) {
 	testCases := []string{
 		"testcase1.json",
-
+		"testcase2.json",
+		"testcase3.json",
+		"testcase4.json",
+		"testcase5.json",
 		// Add more test case file names here
 	}
 	settings := []string{
 		"testcase1settings.json",
+		"testcase1settings.json",
+		"testcase1settings.json",
+		"testcase1settings.json",
+		"testcase1settings.json",
 	}
 
 	for i, tc := range testCases {
+		fmt.Println("Running testecase file ", tc)
 		wd, err := os.Getwd()
 		if err != nil {
 			t.Fatalf("Error getting working directory: %v", err)
@@ -178,24 +185,65 @@ func TestPaperTrade(t *testing.T) {
 		settingsFilePath := filepath.Join(currentFilePath, "testcases", settingsFileName)
 		//create obj
 		LoadTimeLocation()
-		acutalObj := atmcs.New(settingsFilePath, currentFilePath, func() time.Time { return testCase.CurrentTime })
+		actualObj := atmcs.New(settingsFilePath, currentFilePath, func() time.Time { return testCase.CurrentTime })
 		var broker TestBroker
 		broker.Expiries = testCase.OptionExpiries
 		broker.BidAsks = testCase.OptionDepths
 		broker.LTP = testCase.LTP
 
-		acutalObj.SetBroker(&broker)
-		acutalObj.PaperTrade(executor.Buy)
-		// see if atmcs.Trade == TestCase.ExpectedTrade
-		fmt.Println(acutalObj.GetCurrentTime(), "hello")
-		fmt.Printf("\nExpected:%+v\nActual:%+v", testCase.ExpectedTrade.EntryPositions, acutalObj.Trade.EntryPositions)
-		if len(acutalObj.Trade.EntryPositions) != len(testCase.ExpectedTrade.EntryPositions) {
-			t.Fatalf("\nActual:%+v\nExpected:%+v", len(acutalObj.Trade.EntryPositions), len(testCase.ExpectedTrade.EntryPositions))
+		actualObj.SetBroker(&broker)
+		if testCase.Signal.Signal == cpr.Buy {
+			actualObj.PaperTrade(executor.Buy)
+		} else {
+			actualObj.PaperTrade(executor.Sell)
 		}
-		for i := 0; i < len(acutalObj.Trade.EntryPositions); i += 1 {
-			if acutalObj.Trade.EntryPositions[i].GetExpiry() != testCase.ExpectedTrade.EntryPositions[i].GetExpiry() {
-				t.Fatalf("\nActual:%+v\nExpected:%+v", acutalObj.Trade.EntryPositions[i].GetExpiry(), testCase.ExpectedTrade.EntryPositions[i].GetExpiry())
-				assert.Equal(t, acutalObj.Trade.EntryPositions, testCase.ExpectedTrade.EntryPositions)
+		// see if atmcs.Trade == TestCase.ExpectedTrade
+		fmt.Printf("\nExpected:%+v\nActual:%+v\n", testCase.ExpectedTrade.EntryPositions, actualObj.Trade.EntryPositions)
+		if len(actualObj.Trade.EntryPositions) != len(testCase.ExpectedTrade.EntryPositions) {
+			t.Fatalf("\nActual:%+v\nExpected:%+v\n", len(actualObj.Trade.EntryPositions), len(testCase.ExpectedTrade.EntryPositions))
+		}
+		for i := 0; i < len(actualObj.Trade.EntryPositions); i++ {
+			entryActual := actualObj.Trade.EntryPositions[i]
+			entryExpected := testCase.ExpectedTrade.EntryPositions[i]
+
+			// Compare Expiry field
+			if !entryActual.GetExpiry().Equal(entryExpected.GetExpiry()) {
+				t.Fatalf("\nActual Expiry: %+v\nExpected Expiry: %+v\n", entryActual.GetExpiry(), entryExpected.GetExpiry())
+			}
+
+			// Compare Strike field
+			if entryActual.GetStrike() != entryExpected.GetStrike() {
+				t.Fatalf("\nActual Strike: %f\nExpected Strike: %f\n", entryActual.GetStrike(), entryExpected.GetStrike())
+			}
+
+			// Compare Type field
+			if entryActual.GetOptionType() != entryExpected.GetOptionType() {
+				t.Fatalf("\nActual Type: %s\nExpected Type: %s\n", entryActual.GetOptionType(), entryExpected.GetOptionType())
+			}
+
+			// Compare Symbol field
+			if entryActual.GetOptionSymbol() != entryExpected.GetOptionSymbol() {
+				t.Fatalf("\nActual Symbol: %s\nExpected Symbol: %s\n", entryActual.GetOptionSymbol(), entryExpected.GetOptionSymbol())
+			}
+
+			// Compare UnderlyingSymbol field
+			if entryActual.GetUnderlyingSymbol() != entryExpected.GetUnderlyingSymbol() {
+				t.Fatalf("\nActual UnderlyingSymbol: %s\nExpected UnderlyingSymbol: %s\n", entryActual.GetUnderlyingSymbol(), entryExpected.GetUnderlyingSymbol())
+			}
+
+			// Compare Price field
+			if entryActual.GetPrice() != entryExpected.GetPrice() {
+				t.Fatalf("\nActual Price: %f\nExpected Price: %f\n", entryActual.GetPrice(), entryExpected.GetPrice())
+			}
+
+			// Compare TradeType field
+			if entryActual.GetTradeType() != entryExpected.GetTradeType() {
+				t.Fatalf("\nActual TradeType: %s\nExpected TradeType: %s\n", entryActual.GetTradeType(), entryExpected.GetTradeType())
+			}
+
+			// Compare Quantity field
+			if entryActual.GetQuantity() != entryExpected.GetQuantity() {
+				t.Fatalf("\nActual Quantity: %d\nExpected Quantity: %d\n", entryActual.GetQuantity(), entryExpected.GetQuantity())
 			}
 		}
 

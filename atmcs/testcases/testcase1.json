@@ -27,10 +27,10 @@
       {
         "expiry": "2023-05-25T00:00:00+05:30",
         "strike": 17200,
-        "type": "CE",
+        "type": "PE",
         "symbol": "NIFTY",
         "underlying_symbol": "NIFTY",
-        "price": 113,
+        "price": 130.5,
         "trade_type": "Buy",
         "quantity": 1800
       }

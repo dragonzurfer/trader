@@ -8,8 +8,8 @@ import (
 
 type Trade struct {
 	InTrade            bool
-	EntryPositions     []executor.OptionLike
-	ExitPositions      []executor.OptionLike
+	EntryPositions     []executor.OptionPositionLike
+	ExitPositions      []executor.OptionPositionLike
 	TimeOfEntry        time.Time
 	TimeOfExit         time.Time
 	TrailStopLossPrice float64
@@ -17,19 +17,19 @@ type Trade struct {
 	TargetPrice        float64
 }
 
-func (t *Trade) GetEntryPositions() []executor.OptionLike {
+func (t *Trade) GetEntryPositions() []executor.OptionPositionLike {
 	return t.EntryPositions
 }
 
-func (t *Trade) SetEntryPositions(positions []executor.OptionLike) {
+func (t *Trade) SetEntryPositions(positions []executor.OptionPositionLike) {
 	t.EntryPositions = positions
 }
 
-func (t *Trade) GetExitPositions() []executor.OptionLike {
+func (t *Trade) GetExitPositions() []executor.OptionPositionLike {
 	return t.ExitPositions
 }
 
-func (t *Trade) SetExitPositions(positions []executor.OptionLike) {
+func (t *Trade) SetExitPositions(positions []executor.OptionPositionLike) {
 	t.ExitPositions = positions
 }
 

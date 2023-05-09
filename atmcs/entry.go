@@ -47,15 +47,15 @@ func (obj *ATMcs) PaperTrade(tradeType executor.TradeType) {
 	}
 }
 
-func (obj *ATMcs) makeEntryPositions(tradeType executor.TradeType) []executor.OptionLike {
+func (obj *ATMcs) makeEntryPositions(tradeType executor.TradeType) []executor.OptionPositionLike {
+
 	ltp, err := obj.Broker.GetLTP(obj.Symbol)
 	if err != nil {
 		log.Println(err.Error())
 		return nil
 	}
 
-	atmStrike := GetStrikeATM(ltp, obj.StrikeDiff)
-	strike := GetNearest100ITMStrike(atmStrike, tradeType)
+	strike := GetNearest100ITMStrike(ltp, tradeType)
 
 	expiries, err := obj.Broker.GetOptionExpiries(obj.Symbol)
 	if err != nil {
@@ -69,7 +69,7 @@ func (obj *ATMcs) makeEntryPositions(tradeType executor.TradeType) []executor.Op
 		return nil
 	}
 
-	buyExpiry, err := GetMonthlyExpiry(obj.GetCurrentTime(), expiries)
+	buyExpiry, err := GetMonthlyExpiryCalendarSpread(obj.GetCurrentTime(), sellExpiry.ExpiryDate, expiries)
 	if err != nil {
 		log.Println(err.Error())
 		return nil
@@ -79,7 +79,7 @@ func (obj *ATMcs) makeEntryPositions(tradeType executor.TradeType) []executor.Op
 
 	quantity := obj.Quantity
 	var sellPosition, buyPosition OptionPosition
-	var entryPositions []executor.OptionLike
+	var entryPositions []executor.OptionPositionLike
 	if tradeType == executor.Buy {
 		sellPosition = MakeEntryPosition(symbol, strike, sellExpiry, executor.PutOption, executor.Sell, quantity)
 		buyPosition = MakeEntryPosition(symbol, strike, buyExpiry, executor.PutOption, executor.Buy, quantity/2)
@@ -173,7 +173,7 @@ func GetExpiry(currentTime time.Time, minDaysToExpiry int64, strike float64, exp
 	return earliestExpiry, err
 }
 
-func GetMonthlyExpiry(currentTime time.Time, expiries []executor.Expiry) (executor.Expiry, error) {
+func GetMonthlyExpiryCalendarSpread(currentTime time.Time, sellExpiry time.Time, expiries []executor.Expiry) (executor.Expiry, error) {
 	currentYear, currentMonth := currentTime.Year(), currentTime.Month()
 
 	var lastExpiryOfCurrentMonth executor.Expiry
@@ -187,18 +187,20 @@ func GetMonthlyExpiry(currentTime time.Time, expiries []executor.Expiry) (execut
 		nextMonth = 1
 		nextYear++
 	}
-
 	for _, expiry := range expiries {
-		expiryYear, expiryMonth := expiry.ExpiryDate.Year(), expiry.ExpiryDate.Month()
+		if expiry.ExpiryDate.After(sellExpiry) {
 
-		if expiryYear == currentYear && expiryMonth == currentMonth {
-			lastExpiryOfCurrentMonth = expiry
-			foundCurrentMonth = true
-		} else if expiryYear == nextYear && expiryMonth == nextMonth {
-			lastExpiryOfNextMonth = expiry
-			foundNextMonth = true
-		} else if expiryYear > nextYear || (expiryYear == nextYear && expiryMonth > nextMonth) {
-			break
+			expiryYear, expiryMonth := expiry.ExpiryDate.Year(), expiry.ExpiryDate.Month()
+
+			if expiryYear == currentYear && expiryMonth == currentMonth {
+				lastExpiryOfCurrentMonth = expiry
+				foundCurrentMonth = true
+			} else if expiryYear == nextYear && expiryMonth == nextMonth {
+				lastExpiryOfNextMonth = expiry
+				foundNextMonth = true
+			} else if expiryYear > nextYear || (expiryYear == nextYear && expiryMonth > nextMonth) {
+				break
+			}
 		}
 	}
 
@@ -210,6 +212,7 @@ func GetMonthlyExpiry(currentTime time.Time, expiries []executor.Expiry) (execut
 		return executor.Expiry{}, errors.New("no suitable monthly expiry found")
 	}
 }
+
 func GetStrikeATM(ltp float64, strikeDiff float64) float64 {
 	return roundToNearestMultiple(ltp, strikeDiff)
 }
@@ -231,9 +234,8 @@ func GetNearest100ITMStrike(ltp float64, tradeType executor.TradeType) float64 {
 			return closest100Multiple - 100
 		}
 		return closest100Multiple
-	default:
-		panic("Invalid trade type")
 	}
+	return closest100Multiple
 }
 
 func roundToNearest100Multiple(value float64) float64 {
