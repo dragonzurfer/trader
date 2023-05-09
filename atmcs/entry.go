@@ -142,11 +142,6 @@ func GetAvgMarketDepth(depth []executor.MarketDepthLike) float64 {
 	return roundedPrice
 }
 
-func roundToNearest(val, roundTo float64) float64 {
-	rounded := roundTo * float64(int(val/roundTo+0.5))
-	return rounded
-}
-
 func GetBids(broker executor.BrokerLike, pos OptionPosition) ([]executor.MarketDepthLike, error) {
 	bid_aks, err := broker.GetMarketDepthOption(pos.Strike, pos.Expiry, pos.Type)
 	return bid_aks.GetBids(), err
@@ -213,15 +208,8 @@ func GetMonthlyExpiryCalendarSpread(currentTime time.Time, sellExpiry time.Time,
 	}
 }
 
-func GetStrikeATM(ltp float64, strikeDiff float64) float64 {
-	return roundToNearestMultiple(ltp, strikeDiff)
-}
-func roundToNearestMultiple(value, multiple float64) float64 {
-	return multiple * math.Round(value/multiple)
-}
-
 func GetNearest100ITMStrike(ltp float64, tradeType executor.TradeType) float64 {
-	closest100Multiple := roundToNearest100Multiple(ltp)
+	closest100Multiple := roundToNearest(ltp, 100)
 
 	switch tradeType {
 	case executor.Buy:
@@ -238,6 +226,7 @@ func GetNearest100ITMStrike(ltp float64, tradeType executor.TradeType) float64 {
 	return closest100Multiple
 }
 
-func roundToNearest100Multiple(value float64) float64 {
-	return 100 * math.Round(value/100)
+func roundToNearest(val, roundTo float64) float64 {
+	rounded := roundTo * float64(int(val/roundTo+0.5))
+	return rounded
 }
