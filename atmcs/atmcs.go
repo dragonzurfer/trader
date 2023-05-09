@@ -22,6 +22,7 @@ type ATMcs struct {
 	Trade          trade.Trade
 	Settings
 	SettingsFilesPath string
+	GetCurrentTime    func() time.Time
 }
 
 type Settings struct {
@@ -92,9 +93,10 @@ func (obj *ATMcs) GetSleepDuration() time.Duration {
 	return time.Minute
 }
 
-func New(settingsFilePath, tradeFilePath string) *ATMcs {
+func New(settingsFilePath, tradeFilePath string, currentTimeFunc func() time.Time) *ATMcs {
 	var obj ATMcs
 	obj.SetSettingsFilesPath(settingsFilePath)
 	obj.SetTradeFilePath(tradeFilePath)
+	obj.GetCurrentTime = currentTimeFunc
 	return &obj
 }

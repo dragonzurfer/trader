@@ -2,6 +2,7 @@ package atmcs_test
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -9,10 +10,18 @@ import (
 	"testing"
 	"time"
 
+	"trader/atmcs"
+
 	cpr "github.com/dragonzurfer/strategy/CPR"
-	"github.com/dragonzurfer/trader/atmcs"
 	"github.com/dragonzurfer/trader/executor"
+	"github.com/stretchr/testify/assert"
 )
+
+var ISTLocation *time.Location
+
+func LoadTimeLocation() {
+	ISTLocation, _ = time.LoadLocation("Asia/Kolkata")
+}
 
 type Settings struct {
 	TradeFilePath   string  `json:"tradeFilePath"`
@@ -89,11 +98,12 @@ type TestOptionDepth struct {
 }
 
 type TestCase struct {
+	CurrentTime    time.Time            `json:"current_time"`
+	LTP            float64              `json:"ltp"`
 	Signal         cpr.Signal           `json:"signal"`
 	ExpectedTrade  ExpectedTrade        `json:"expected_trade"`
 	OptionExpiries []executor.Expiry    `json:"option_chains"`
 	OptionDepths   map[time.Time]BidAsk `json:"option_depths"`
-	Settings       Settings
 }
 
 type TestBroker struct {
@@ -120,8 +130,13 @@ func (b *TestBroker) GetOptionExpiries(string) ([]executor.Expiry, error) {
 	return b.Expiries, nil
 }
 
-func (b *TestBroker) GetMarketDepthOption(float64, time.Time, executor.OptionType) (executor.BidAskLike, error) {
-	return nil, nil
+func (b *TestBroker) GetMarketDepthOption(strike float64, optExpiry time.Time, optType executor.OptionType) (executor.BidAskLike, error) {
+	for expiry, bidask := range b.BidAsks {
+		if expiry == optExpiry {
+			return bidask, nil
+		}
+	}
+	return nil, errors.New("API Could not find expiry date")
 }
 
 func (b *TestBroker) GetCandlesOption(float64, time.Time, executor.OptionType) ([]executor.CandleLike, error) {
@@ -162,21 +177,25 @@ func TestPaperTrade(t *testing.T) {
 		}
 		settingsFilePath := filepath.Join(currentFilePath, "testcases", settingsFileName)
 		//create obj
-		acutalObj := atmcs.New(settingsFilePath, currentFilePath)
+		LoadTimeLocation()
+		acutalObj := atmcs.New(settingsFilePath, currentFilePath, func() time.Time { return testCase.CurrentTime })
 		var broker TestBroker
 		broker.Expiries = testCase.OptionExpiries
 		broker.BidAsks = testCase.OptionDepths
-		broker.LTP = 17150
+		broker.LTP = testCase.LTP
+
 		acutalObj.SetBroker(&broker)
 		acutalObj.PaperTrade(executor.Buy)
 		// see if atmcs.Trade == TestCase.ExpectedTrade
-		fmt.Printf("%+v", testCase.ExpectedTrade.EntryPositions)
+		fmt.Println(acutalObj.GetCurrentTime(), "hello")
+		fmt.Printf("\nExpected:%+v\nActual:%+v", testCase.ExpectedTrade.EntryPositions, acutalObj.Trade.EntryPositions)
 		if len(acutalObj.Trade.EntryPositions) != len(testCase.ExpectedTrade.EntryPositions) {
 			t.Fatalf("\nActual:%+v\nExpected:%+v", len(acutalObj.Trade.EntryPositions), len(testCase.ExpectedTrade.EntryPositions))
 		}
 		for i := 0; i < len(acutalObj.Trade.EntryPositions); i += 1 {
 			if acutalObj.Trade.EntryPositions[i].GetExpiry() != testCase.ExpectedTrade.EntryPositions[i].GetExpiry() {
 				t.Fatalf("\nActual:%+v\nExpected:%+v", acutalObj.Trade.EntryPositions[i].GetExpiry(), testCase.ExpectedTrade.EntryPositions[i].GetExpiry())
+				assert.Equal(t, acutalObj.Trade.EntryPositions, testCase.ExpectedTrade.EntryPositions)
 			}
 		}
 

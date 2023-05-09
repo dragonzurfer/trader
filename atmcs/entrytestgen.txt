@@ -1,0 +1,247 @@
+package main
+
+import (
+	"encoding/json"
+	"io/ioutil"
+	"log"
+	"math/rand"
+	"strings"
+	"time"
+
+	cpr "github.com/dragonzurfer/strategy/CPR"
+	"github.com/dragonzurfer/trader/executor"
+)
+
+var ISTLocation *time.Location
+
+func LoadTimeLocation() {
+	ISTLocation, _ = time.LoadLocation("Asia/Kolkata")
+
+}
+
+type MarketDepth struct {
+	Price       float64 `json:"price"`
+	Quantity    int64   `json:"quantity"`
+	NumOfOrders int64   `json:"num_of_orders"`
+}
+
+type BidAsk struct {
+	Bids []MarketDepth `json:"bids"`
+	Asks []MarketDepth `json:"asks"`
+}
+
+func (md MarketDepth) GetPrice() float64              { return md.Price }
+func (md MarketDepth) GetQuantity() int64             { return md.Quantity }
+func (md MarketDepth) GetNumOfOrders() int64          { return md.NumOfOrders }
+func (ba BidAsk) GetBids() []executor.MarketDepthLike { return toMarketDepthLikeSlice(ba.Bids) }
+func (ba BidAsk) GetAsks() []executor.MarketDepthLike { return toMarketDepthLikeSlice(ba.Asks) }
+
+func toMarketDepthLikeSlice(marketDepths []MarketDepth) []executor.MarketDepthLike {
+	depthLikes := make([]executor.MarketDepthLike, len(marketDepths))
+	for i, depth := range marketDepths {
+		depthLikes[i] = depth
+	}
+	return depthLikes
+}
+
+type Option struct {
+	Expiry           time.Time           `json:"expiry"`
+	Strike           float64             `json:"strike"`
+	Type             executor.OptionType `json:"type"`
+	Symbol           string              `json:"symbol"`
+	UnderlyingSymbol string              `json:"underlying_symbol"`
+}
+
+type OptionPosition struct {
+	Option
+	Price     float64            `json:"price"`
+	TradeType executor.TradeType `json:"trade_type"`
+	Quantity  int64              `json:"quantity"`
+}
+
+func (op OptionPosition) GetTradeType() executor.TradeType { return op.TradeType }
+func (op OptionPosition) GetPrice() float64                { return op.Price }
+func (op OptionPosition) GetQuantity() int64               { return op.Quantity }
+
+func (o Option) GetExpiry() time.Time               { return o.Expiry }
+func (o Option) GetStrike() float64                 { return o.Strike }
+func (o Option) GetOptionType() executor.OptionType { return o.Type }
+func (o Option) GetOptionSymbol() string            { return o.Symbol }
+func (o Option) GetUnderlyingSymbol() string        { return o.UnderlyingSymbol }
+
+type ExpectedTrade struct {
+	InTrade            bool                          `json:"in_trade"`
+	TrailStopLossPrice float64                       `json:"trail_sl"`
+	EntryPositions     []executor.OptionPositionLike `json:"entry_positions"`
+	ExitPositions      []executor.OptionPositionLike `json:"exit_positions"`
+	TimeOfEntry        time.Time                     `json:"time_of_entry"`
+	TimeOfExit         time.Time                     `json:"time_of_exit"`
+	StopLossPrice      float64                       `json:"stop_loss_price"`
+	TargetPrice        float64                       `json:"target_price"`
+}
+
+type TestOptionDepth struct {
+	Option executor.OptionLike `json:"option"`
+	BidAsk executor.BidAskLike `json:"bid_ask"`
+}
+
+type TestCase struct {
+	CurrentTime    time.Time                         `json:"current_time"`
+	LTP            float64                           `json:"ltp"`
+	Signal         cpr.Signal                        `json:"signal"`
+	ExpectedTrade  ExpectedTrade                     `json:"expected_trade"`
+	OptionExpiries []executor.Expiry                 `json:"option_chains"`
+	OptionDepths   map[time.Time]executor.BidAskLike `json:"option_depths"`
+}
+
+func GenerateExpiries(expiries string) []executor.Expiry {
+
+	// Load IST time zone
+
+	var expiriesSlice []executor.Expiry
+
+	lines := strings.Split(expiries, "\n")
+	for _, line := range lines {
+		line = strings.TrimSpace(line)
+		if line == "" {
+			continue
+		}
+
+		expiryDate, err := time.ParseInLocation("2006-01-02", line, ISTLocation)
+		if err != nil {
+			// Handle the error if parsing fails
+			continue
+		}
+
+		expiry := executor.Expiry{
+			ExpiryDate: expiryDate,
+		}
+
+		expiriesSlice = append(expiriesSlice, expiry)
+	}
+
+	return expiriesSlice
+}
+
+func GenerateSignal(entryPrice float64, stoplossPrice float64, targetPrice float64, signalValue cpr.SignalValue) cpr.Signal {
+	var signal cpr.Signal
+	signal.EntryPrice = entryPrice
+	signal.StopLossPrice = stoplossPrice
+	signal.TargetPrice = targetPrice
+	signal.Signal = signalValue
+	return signal
+}
+
+type Pair struct {
+	Price, Bid_Ask_diff float64
+}
+
+func GenerateDepths(gen_list []Pair, expiries []executor.Expiry) map[time.Time](executor.BidAskLike) {
+
+	depths := make(map[time.Time](executor.BidAskLike))
+
+	rand.Seed(time.Now().UnixNano())
+
+	if len(expiries) != len(gen_list) {
+		log.Fatal("Number of expiries not equal to bid_ask price gen list")
+	}
+
+	for i, pair := range gen_list {
+		var bidask BidAsk
+		bid := pair.Price
+		ask := pair.Price + pair.Bid_Ask_diff
+		bidask.Bids = append(bidask.Bids, MarketDepth{bid, 10, 1})
+		bidask.Asks = append(bidask.Asks, MarketDepth{ask, 20, 1})
+		depths[expiries[i].ExpiryDate] = bidask
+	}
+
+	return depths
+
+}
+
+func GenerateOptionPosition(strike float64, exp time.Time, optTyp executor.OptionType, tradeType executor.TradeType, price float64, quantity int64) OptionPosition {
+	option := Option{
+		exp,
+		strike,
+		optTyp,
+		"NIFTY",
+		"NIFTY",
+	}
+	optPos := OptionPosition{
+		option,
+		price,
+		tradeType,
+		quantity,
+	}
+	return optPos
+}
+
+var quantity int64
+
+func GenerateTrade(testCase TestCase, strike float64, optionType executor.OptionType, sellExpiry time.Time, buyExpiry time.Time, signal cpr.SignalValue) ExpectedTrade {
+	sellPrice := 97.0
+	buyPrice := 113.0
+	var sellOption, buyOption OptionPosition
+	if signal == cpr.Buy {
+		sellOption = GenerateOptionPosition(strike, sellExpiry, executor.PutOption, executor.Sell, sellPrice, quantity)
+	} else {
+		sellOption = GenerateOptionPosition(strike, sellExpiry, executor.CallOption, executor.Sell, sellPrice, quantity)
+	}
+
+	if signal == cpr.Buy {
+		buyOption = GenerateOptionPosition(strike, buyExpiry, executor.CallOption, executor.Buy, buyPrice, quantity/2)
+	} else {
+		buyOption = GenerateOptionPosition(strike, buyExpiry, executor.PutOption, executor.Buy, buyPrice, quantity/2)
+	}
+	var expectedTrade ExpectedTrade
+	expectedTrade.EntryPositions = append(expectedTrade.EntryPositions, sellOption)
+	expectedTrade.EntryPositions = append(expectedTrade.EntryPositions, buyOption)
+	expectedTrade.TimeOfEntry = testCase.CurrentTime
+	expectedTrade.TimeOfExit = testCase.CurrentTime
+	return expectedTrade
+}
+
+func main() {
+	LoadTimeLocation()
+	expiries := `
+	2023-05-11
+	2023-05-18
+	2023-05-25
+	2023-06-01
+	2023-06-08
+	2023-06-29
+	`
+	gen_list := []Pair{
+		{97, 0.05},
+		{112, 1},
+		{130, 0.5},
+		{142, 3},
+		{155, 5},
+		{170, 2},
+	}
+	log.SetFlags(log.LstdFlags | log.Llongfile)
+	ltp := 17150.0
+	quantity = 3600
+	testCase := TestCase{}
+	testCase.LTP = ltp
+	testCase.CurrentTime = time.Date(2023, 05, 01, 00, 00, 00, 00, ISTLocation)
+	testCase.OptionExpiries = GenerateExpiries(expiries)
+	testCase.Signal = GenerateSignal(17150, 17100, 17200, cpr.Buy)
+	sellExpiry := testCase.OptionExpiries[0].ExpiryDate
+	buyExpiry := testCase.OptionExpiries[2].ExpiryDate
+	testCase.ExpectedTrade = GenerateTrade(testCase, 17200, executor.PutOption, sellExpiry, buyExpiry, testCase.Signal.Signal)
+	testCase.OptionDepths = GenerateDepths(gen_list, testCase.OptionExpiries)
+	saveTestCaseToFile("test_case.json", testCase)
+}
+
+func saveTestCaseToFile(filename string, testCase TestCase) {
+	jsonData, err := json.MarshalIndent(testCase, "", "  ")
+	if err != nil {
+		log.Fatalf("Error marshaling test case to JSON: %v", err)
+	}
+
+	err = ioutil.WriteFile(filename, jsonData, 0644)
+	if err != nil {
+		log.Fatalf("Error writing test case to file: %v", err)
+	}
+}

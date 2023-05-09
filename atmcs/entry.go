@@ -63,13 +63,13 @@ func (obj *ATMcs) makeEntryPositions(tradeType executor.TradeType) []executor.Op
 		return nil
 	}
 
-	sellExpiry, err := GetExpiry(obj.MinDaysToExpiry, strike, expiries)
+	sellExpiry, err := GetExpiry(obj.GetCurrentTime(), obj.MinDaysToExpiry, strike, expiries)
 	if err != nil {
 		log.Println(err.Error())
 		return nil
 	}
 
-	buyExpiry, err := GetMonthlyExpiry(expiries)
+	buyExpiry, err := GetMonthlyExpiry(obj.GetCurrentTime(), expiries)
 	if err != nil {
 		log.Println(err.Error())
 		return nil
@@ -157,8 +157,7 @@ func GetAsks(broker executor.BrokerLike, pos OptionPosition) ([]executor.MarketD
 	return bid_aks.GetAsks(), err
 }
 
-func GetExpiry(minDaysToExpiry int64, strike float64, expiries []executor.Expiry) (executor.Expiry, error) {
-	currentTime := time.Now()
+func GetExpiry(currentTime time.Time, minDaysToExpiry int64, strike float64, expiries []executor.Expiry) (executor.Expiry, error) {
 	err := errors.New(fmt.Sprintf("Could not find an expiry that has %v days to expiry", minDaysToExpiry))
 	minDiff := int64(math.MaxInt64)
 	var earliestExpiry executor.Expiry
@@ -174,8 +173,7 @@ func GetExpiry(minDaysToExpiry int64, strike float64, expiries []executor.Expiry
 	return earliestExpiry, err
 }
 
-func GetMonthlyExpiry(expiries []executor.Expiry) (executor.Expiry, error) {
-	currentTime := time.Now()
+func GetMonthlyExpiry(currentTime time.Time, expiries []executor.Expiry) (executor.Expiry, error) {
 	currentYear, currentMonth := currentTime.Year(), currentTime.Month()
 
 	var lastExpiryOfCurrentMonth executor.Expiry
