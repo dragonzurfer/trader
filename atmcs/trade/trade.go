@@ -7,12 +7,14 @@ import (
 )
 
 type Trade struct {
-	EntryPositions []executor.OptionLike
-	ExitPositions  []executor.OptionLike
-	TimeOfEntry    time.Time
-	TimeOfExit     time.Time
-	StopLossPrice  float64
-	TargetPrice    float64
+	InTrade            bool
+	EntryPositions     []executor.OptionLike
+	ExitPositions      []executor.OptionLike
+	TimeOfEntry        time.Time
+	TimeOfExit         time.Time
+	TrailStopLossPrice float64
+	StopLossPrice      float64
+	TargetPrice        float64
 }
 
 func (t *Trade) GetEntryPositions() []executor.OptionLike {

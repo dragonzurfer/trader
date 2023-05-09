@@ -1,0 +1,7 @@
+{
+    "tradeFilePath": "/path/to/trades.txt",
+    "quantity": 3600,
+    "strikeDiff": 50,
+    "minDaysToExpiry": 7,
+    "symbol": "NIFTY"
+  }
