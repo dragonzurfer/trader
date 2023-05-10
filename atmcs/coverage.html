@@ -55,9 +55,13 @@
 			<div id="nav">
 				<select id="files">
 				
-				<option value="file0">github.com/dragonzurfer/trader/atmcs/atmcs.go (55.6%)</option>
+				<option value="file0">github.com/dragonzurfer/trader/atmcs/atmcs.go (60.0%)</option>
 				
-				<option value="file1">github.com/dragonzurfer/trader/atmcs/entry.go (82.1%)</option>
+				<option value="file1">github.com/dragonzurfer/trader/atmcs/candleadapter.go (0.0%)</option>
+				
+				<option value="file2">github.com/dragonzurfer/trader/atmcs/entry.go (82.9%)</option>
+				
+				<option value="file3">github.com/dragonzurfer/trader/atmcs/entrysatisfy.go (0.0%)</option>
 				
 				</select>
 			</div>
@@ -85,6 +89,7 @@ import (
 )
 
 type ATMcs struct {
+        ISTLocation    *time.Location
         Signal         cpr.Signal
         EntrySatisfied bool
         ExitSatisfied  bool
@@ -96,34 +101,38 @@ type ATMcs struct {
         Settings
         SettingsFilesPath string
         GetCurrentTime    func() time.Time
+        Holidays
 }
 
 type Settings struct {
-        TradeFilePath   string  `json:"tradeFilePath"`
-        Quantity        int64   `json:"quantity"`
-        StrikeDiff      float64 `json:"strikeDiff"`
-        MinDaysToExpiry int64   `json:"minDaysToExpiry"`
-        Symbol          string  `json:"symbol"`
+        HolidayDatesFilePath string  `json:"holidays_file_path"`
+        MinTrailPercent      float64 `json:"min_trail_percent"`
+        MinTargetPercent     float64 `json:"min_target_percent"`
+        MinStopLossPercent   float64 `json:"min_sl_percent"`
+        TradeFilePath        string  `json:"tradeFilePath"`
+        Quantity             int64   `json:"quantity"`
+        StrikeDiff           float64 `json:"strikeDiff"`
+        MinDaysToExpiry      int64   `json:"minDaysToExpiry"`
+        Symbol               string  `json:"symbol"`
 }
 
-func (obj *ATMcs) loadSettingsFromFile() <span class="cov8" title="1">{
+func (obj *ATMcs) loadSettingsFromFile() error <span class="cov8" title="1">{
         var settings Settings
 
         // Read the JSON file
         fileData, err := ioutil.ReadFile(obj.SettingsFilesPath)
         if err != nil </span><span class="cov0" title="0">{
-                log.Printf("Unable to laod setting from %v : %v", obj.SettingsFilesPath, err.Error())
-                return
+                return err
         }</span>
 
         // Unmarshal the JSON data into the Settings struct
         <span class="cov8" title="1">err = json.Unmarshal(fileData, &amp;settings)
         if err != nil </span><span class="cov0" title="0">{
-                log.Printf("Unable to load setting : %v", err.Error())
-                return
+                return err
         }</span>
 
-        <span class="cov8" title="1">obj.Settings = settings</span>
+        <span class="cov8" title="1">obj.Settings = settings
+        return nil</span>
 }
 
 func (obj *ATMcs) SetBroker(broker executor.BrokerLike) <span class="cov8" title="1">{
@@ -134,9 +143,11 @@ func (obj *ATMcs) SetTradeFilePath(filepath string) <span class="cov8" title="1"
         obj.TradeFilePath = filepath
 }</span>
 
-func (obj *ATMcs) SetSettingsFilesPath(filepath string) <span class="cov8" title="1">{
+func (obj *ATMcs) SetSettingsFilesPath(filepath string) error <span class="cov8" title="1">{
+        var err error
         obj.SettingsFilesPath = filepath
-        obj.loadSettingsFromFile()
+        err = obj.loadSettingsFromFile()
+        return err
 }</span>
 
 func (obj *ATMcs) InTradingWindow() bool <span class="cov0" title="0">{
@@ -166,16 +177,100 @@ func (obj *ATMcs) GetSleepDuration() time.Duration <span class="cov0" title="0">
         return time.Minute
 }</span>
 
+func (obj *ATMcs) LoadLocation() error <span class="cov8" title="1">{
+        istLocation, err := time.LoadLocation("Asia/Kolkata")
+        obj.ISTLocation = istLocation
+        return err
+}</span>
+
+func (obj *ATMcs) LoadHolidays() error <span class="cov8" title="1">{
+        holidaysData, err := ioutil.ReadFile(obj.HolidayDatesFilePath)
+        if err != nil </span><span class="cov0" title="0">{
+                log.Println("Error reading holidays file:", err)
+                return err
+        }</span>
+
+        <span class="cov8" title="1">var holidays Holidays
+        err = json.Unmarshal(holidaysData, &amp;holidays)
+        if err != nil </span><span class="cov0" title="0">{
+                log.Println("Error unmarshaling holidays data:", err)
+                return err
+        }</span>
+        <span class="cov8" title="1">obj.Holidays = holidays
+        return nil</span>
+}
+
 func New(settingsFilePath, tradeFilePath string, currentTimeFunc func() time.Time) *ATMcs <span class="cov8" title="1">{
         var obj ATMcs
-        obj.SetSettingsFilesPath(settingsFilePath)
-        obj.SetTradeFilePath(tradeFilePath)
+        if err := obj.SetSettingsFilesPath(settingsFilePath); err != nil </span><span class="cov0" title="0">{
+                log.Println("error loading settings file:", err.Error())
+                return nil
+        }</span>
+        <span class="cov8" title="1">if err := obj.LoadHolidays(); err != nil </span><span class="cov0" title="0">{
+                log.Printf("error loading holidays file from %+v:%v\n", obj.Settings.HolidayDatesFilePath, err.Error())
+                return nil
+        }</span>
+        <span class="cov8" title="1">if err := obj.LoadLocation(); err != nil </span><span class="cov0" title="0">{
+                log.Println("error loading ist location:", err.Error())
+                return nil
+        }</span>
+        <span class="cov8" title="1">obj.SetTradeFilePath(tradeFilePath)
         obj.GetCurrentTime = currentTimeFunc
-        return &amp;obj
-}</span>
+        return &amp;obj</span>
+}
 </pre>
 		
 		<pre class="file" id="file1" style="display: none">package atmcs
+
+import (
+        "github.com/dragonzurfer/revclose"
+        "github.com/dragonzurfer/trader/executor"
+)
+
+type CandleAdapter struct {
+        candles []executor.CandleLike
+}
+
+type RevCandleAdapter struct {
+        candle executor.CandleLike
+}
+
+func (rca *RevCandleAdapter) GetHigh() float64 <span class="cov0" title="0">{
+        return rca.candle.GetHigh()
+}</span>
+
+func (rca *RevCandleAdapter) GetLow() float64 <span class="cov0" title="0">{
+        return rca.candle.GetLow()
+}</span>
+
+func (rca *RevCandleAdapter) GetClose() float64 <span class="cov0" title="0">{
+        return rca.candle.GetClose()
+}</span>
+
+func (rca *RevCandleAdapter) GetOpen() float64 <span class="cov0" title="0">{
+        return rca.candle.GetOpen()
+}</span>
+
+func (rca *RevCandleAdapter) GetOHLC() (float64, float64, float64, float64) <span class="cov0" title="0">{
+        return rca.candle.GetOpen(), rca.candle.GetHigh(), rca.candle.GetLow(), rca.candle.GetClose()
+}</span>
+
+func (ca *CandleAdapter) GetCandle(index int) revclose.RevCandle <span class="cov0" title="0">{
+        return &amp;RevCandleAdapter{candle: ca.candles[index]}
+}</span>
+
+func (ca *CandleAdapter) GetCandlesLength() int <span class="cov0" title="0">{
+        return len(ca.candles)
+}</span>
+
+func NewCandleAdapter(candles []executor.CandleLike) *CandleAdapter <span class="cov0" title="0">{
+        return &amp;CandleAdapter{
+                candles: candles,
+        }
+}</span>
+</pre>
+		
+		<pre class="file" id="file2" style="display: none">package atmcs
 
 import (
         "errors"
@@ -212,10 +307,6 @@ func (o Option) GetStrike() float64                 <span class="cov8" title="1"
 func (o Option) GetOptionType() executor.OptionType <span class="cov8" title="1">{ return o.Type }</span>
 func (o Option) GetOptionSymbol() string            <span class="cov8" title="1">{ return o.Symbol }</span>
 func (o Option) GetUnderlyingSymbol() string        <span class="cov8" title="1">{ return o.UnderlyingSymbol }</span>
-
-func (obj *ATMcs) IsEntrySatisfied() bool <span class="cov0" title="0">{
-        return true
-}</span>
 
 func (obj *ATMcs) PaperTrade(tradeType executor.TradeType) <span class="cov8" title="1">{
         obj.Trade = trade.Trade{
@@ -319,23 +410,24 @@ func GetAvgMarketDepth(depth []executor.MarketDepthLike) float64 <span class="co
         return roundedPrice</span>
 }
 
-func roundToNearest(val, roundTo float64) float64 <span class="cov8" title="1">{
-        rounded := roundTo * float64(int(val/roundTo+0.5))
-        return rounded
-}</span>
-
 func GetBids(broker executor.BrokerLike, pos OptionPosition) ([]executor.MarketDepthLike, error) <span class="cov8" title="1">{
         bid_aks, err := broker.GetMarketDepthOption(pos.Strike, pos.Expiry, pos.Type)
-        return bid_aks.GetBids(), err
-}</span>
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, err
+        }</span>
+        <span class="cov8" title="1">return bid_aks.GetBids(), err</span>
+}
 
 func GetAsks(broker executor.BrokerLike, pos OptionPosition) ([]executor.MarketDepthLike, error) <span class="cov8" title="1">{
         bid_aks, err := broker.GetMarketDepthOption(pos.Strike, pos.Expiry, pos.Type)
-        return bid_aks.GetAsks(), err
-}</span>
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, err
+        }</span>
+        <span class="cov8" title="1">return bid_aks.GetAsks(), err</span>
+}
 
 func GetExpiry(currentTime time.Time, minDaysToExpiry int64, strike float64, expiries []executor.Expiry) (executor.Expiry, error) <span class="cov8" title="1">{
-        err := errors.New(fmt.Sprintf("Could not find an expiry that has %v days to expiry", minDaysToExpiry))
+        err := fmt.Errorf("Could not find an expiry that has %v days to expiry", minDaysToExpiry)
         minDiff := int64(math.MaxInt64)
         var earliestExpiry executor.Expiry
         for _, expiry := range expiries </span><span class="cov8" title="1">{
@@ -390,15 +482,8 @@ func GetMonthlyExpiryCalendarSpread(currentTime time.Time, sellExpiry time.Time,
         }</span>
 }
 
-func GetStrikeATM(ltp float64, strikeDiff float64) float64 <span class="cov0" title="0">{
-        return roundToNearestMultiple(ltp, strikeDiff)
-}</span>
-func roundToNearestMultiple(value, multiple float64) float64 <span class="cov0" title="0">{
-        return multiple * math.Round(value/multiple)
-}</span>
-
 func GetNearest100ITMStrike(ltp float64, tradeType executor.TradeType) float64 <span class="cov8" title="1">{
-        closest100Multiple := roundToNearest100Multiple(ltp)
+        closest100Multiple := roundToNearest(ltp, 100)
 
         switch tradeType </span>{
         case executor.Buy:<span class="cov8" title="1">
@@ -415,9 +500,112 @@ func GetNearest100ITMStrike(ltp float64, tradeType executor.TradeType) float64 <
         <span class="cov0" title="0">return closest100Multiple</span>
 }
 
-func roundToNearest100Multiple(value float64) float64 <span class="cov8" title="1">{
-        return 100 * math.Round(value/100)
+func roundToNearest(val, roundTo float64) float64 <span class="cov8" title="1">{
+        rounded := roundTo * float64(int(val/roundTo+0.5))
+        return rounded
 }</span>
+</pre>
+		
+		<pre class="file" id="file3" style="display: none">package atmcs
+
+import (
+        "errors"
+        "log"
+        "time"
+
+        cpr "github.com/dragonzurfer/strategy/CPR"
+)
+
+func (obj *ATMcs) IsEntrySatisfied() bool <span class="cov0" title="0">{
+        minTargetPercent := obj.Settings.MinTargetPercent
+        minSLPercent := obj.Settings.MinStopLossPercent
+        previousDayCandle, currentDayCandles, err := obj.GetCandles()
+        if err != nil </span><span class="cov0" title="0">{
+                log.Println("Failed to get candle data:", err.Error())
+                return false
+        }</span>
+        <span class="cov0" title="0">obj.Signal = cpr.GetCPRSignal(minSLPercent, minTargetPercent, previousDayCandle, currentDayCandles)
+        return true</span>
+}
+
+func (obj *ATMcs) GetCandles() (cpr.CPRCandles, cpr.CPRCandles, error) <span class="cov0" title="0">{
+        currentTime := obj.GetCurrentTime()
+        previousDate := obj.GetPreviousNonWeekendNonHolidayDate(currentTime)
+        currentDay5minCandles, err := obj.GetCurrentDayCandleData5minFyers(currentTime)
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, nil, errors.New("Error Getting current day 5min candle data: " + err.Error())
+        }</span>
+        <span class="cov0" title="0">previousDayCandles, err := obj.GetPreviousDayCandleDataFyers(previousDate)
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, nil, errors.New("Error Getting previous day candle data: " + err.Error())
+        }</span>
+        <span class="cov0" title="0">return currentDay5minCandles, previousDayCandles, nil</span>
+}
+
+func (obj *ATMcs) GetPreviousDayCandleDataFyers(previousDate time.Time) (cpr.CPRCandles, error) <span class="cov0" title="0">{
+        from := time.Date(previousDate.Year(), previousDate.Month(), previousDate.Day(), 9, 15, 0, 0, obj.ISTLocation)
+        to := time.Date(previousDate.Year(), previousDate.Month(), previousDate.Day(), 15, 30, 0, 0, obj.ISTLocation)
+        candles, err := obj.Broker.GetCandles(obj.Symbol, from, to)
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, err
+        }</span>
+        <span class="cov0" title="0">cprCandles := NewCandleAdapter(candles)
+        return cprCandles, err</span>
+}
+
+func (obj *ATMcs) GetCurrentDayCandleData5minFyers(currentTime time.Time) (cpr.CPRCandles, error) <span class="cov0" title="0">{
+        from := time.Date(currentTime.Year(), currentTime.Month(), currentTime.Day(), 9, 15, 0, 0, obj.ISTLocation)
+        to := currentTime
+        candles, err := obj.Broker.GetCandles(obj.Symbol, from, to)
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, err
+        }</span>
+        <span class="cov0" title="0">cprCandles := NewCandleAdapter(candles)
+        return cprCandles, nil</span>
+}
+
+type Holidays struct {
+        HolidayDates []string `json:"holiday_dates"`
+}
+
+func isDateHoliday(date string, holidays *Holidays) bool <span class="cov0" title="0">{
+        for _, holiday := range holidays.HolidayDates </span><span class="cov0" title="0">{
+                if holiday == date </span><span class="cov0" title="0">{
+                        return true
+                }</span>
+        }
+        <span class="cov0" title="0">return false</span>
+}
+
+func WasMarketOpen(date time.Time, holidays *Holidays) bool <span class="cov0" title="0">{
+        loc, err := time.LoadLocation("Asia/Kolkata")
+        if err != nil </span><span class="cov0" title="0">{
+                log.Println("Error loading location:", err)
+                return false
+        }</span>
+
+        // Check if the date is a weekend (Saturday or Sunday)
+        <span class="cov0" title="0">if date.Weekday() == time.Saturday || date.Weekday() == time.Sunday </span><span class="cov0" title="0">{
+                return false
+        }</span>
+
+        <span class="cov0" title="0">dateString := date.In(loc).Format("2006-01-02")
+
+        // Check if the date is a holiday
+        if isDateHoliday(dateString, holidays) </span><span class="cov0" title="0">{
+                return false
+        }</span>
+
+        <span class="cov0" title="0">return true</span>
+}
+
+func (obj *ATMcs) GetPreviousNonWeekendNonHolidayDate(currentDate time.Time) time.Time <span class="cov0" title="0">{
+        previousDate := currentDate.AddDate(0, 0, -1)
+        for !WasMarketOpen(previousDate, &amp;obj.Holidays) </span><span class="cov0" title="0">{
+                previousDate = previousDate.AddDate(0, 0, -1)
+        }</span>
+        <span class="cov0" title="0">return previousDate</span>
+}
 </pre>
 		
 		</div>

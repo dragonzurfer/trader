@@ -4,8 +4,8 @@ github.com/dragonzurfer/revclose v1.0.1 h1:bZgvH0+v0RriHdxEGI2VNhWjq4qx6PsvXjVOs
 github.com/dragonzurfer/revclose v1.0.1/go.mod h1:mq2t5zjQgWtaZ0WCpvjOuo0GMtTZNVOwb9tAGtiw5LQ=
 github.com/dragonzurfer/strategy/CPR v0.0.0-20230509071417-a40dbe1a8724 h1:jPBrbkcUahnFzD0OpAgogRB4xE05zFP6uA2+3vIqhEI=
 github.com/dragonzurfer/strategy/CPR v0.0.0-20230509071417-a40dbe1a8724/go.mod h1:jSCXDjFqxOVsFJXVSUKsZjgyyX8S4i1hzX94/dRDckc=
-github.com/dragonzurfer/trader/executor v0.0.0-20230508200255-3d7d356c064b h1:EksgT1dsB5ps8ryv1JHTBcm10bNL9FrHoYWZe/k1Poc=
-github.com/dragonzurfer/trader/executor v0.0.0-20230508200255-3d7d356c064b/go.mod h1:THW/vRrxAlc47KGWgCpHIVaPoFox6FvXWypbmHNsWOw=
+github.com/dragonzurfer/trader/executor v0.0.0-20230510185944-602c8cb10c85 h1:aqV0JsDFS7SBX5K2pcpnCYZ0+fg0cRO6C0rjN/VvdWA=
+github.com/dragonzurfer/trader/executor v0.0.0-20230510185944-602c8cb10c85/go.mod h1:THW/vRrxAlc47KGWgCpHIVaPoFox6FvXWypbmHNsWOw=
 github.com/pmezard/go-difflib v1.0.0/go.mod h1:iKH77koFhYxTK1pcRnkKkqfTogsbg7gZNVY4sRDYZ/4=
 github.com/stretchr/objx v0.1.0/go.mod h1:HFkY916IF+rwdDfMAkV7OtwuqBVzrE8GR6GFx+wExME=
 github.com/stretchr/objx v0.4.0/go.mod h1:YvHI0jy2hoMjB+UWwv71VJQ9isScKT/TqJzVSSt89Yw=
