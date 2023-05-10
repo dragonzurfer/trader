@@ -17,6 +17,7 @@ type ExecutorLike interface {
 	GetSleepDuration() time.Duration
 	PaperTrade(TradeType)
 	AccountTrade(TradeType)
+	GetTradeType() TradeType
 }
 
 type Trader struct {
