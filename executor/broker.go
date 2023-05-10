@@ -34,8 +34,9 @@ const (
 type TradeType string
 
 const (
-	Sell TradeType = "Sell"
-	Buy  TradeType = "Buy"
+	Sell    TradeType = "Sell"
+	Buy     TradeType = "Buy"
+	Nuetral TradeType = "Neutral"
 )
 
 type OptionLike interface {
