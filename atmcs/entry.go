@@ -36,10 +36,6 @@ func (o Option) GetOptionType() executor.OptionType { return o.Type }
 func (o Option) GetOptionSymbol() string            { return o.Symbol }
 func (o Option) GetUnderlyingSymbol() string        { return o.UnderlyingSymbol }
 
-func (obj *ATMcs) IsEntrySatisfied() bool {
-	return true
-}
-
 func (obj *ATMcs) PaperTrade(tradeType executor.TradeType) {
 	obj.Trade = trade.Trade{
 		InTrade:        true,
@@ -144,11 +140,17 @@ func GetAvgMarketDepth(depth []executor.MarketDepthLike) float64 {
 
 func GetBids(broker executor.BrokerLike, pos OptionPosition) ([]executor.MarketDepthLike, error) {
 	bid_aks, err := broker.GetMarketDepthOption(pos.Strike, pos.Expiry, pos.Type)
+	if err != nil {
+		return nil, err
+	}
 	return bid_aks.GetBids(), err
 }
 
 func GetAsks(broker executor.BrokerLike, pos OptionPosition) ([]executor.MarketDepthLike, error) {
 	bid_aks, err := broker.GetMarketDepthOption(pos.Strike, pos.Expiry, pos.Type)
+	if err != nil {
+		return nil, err
+	}
 	return bid_aks.GetAsks(), err
 }
 

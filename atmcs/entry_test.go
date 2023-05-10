@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"os"
 	"path/filepath"
 	"testing"
@@ -121,7 +122,7 @@ func (b *TestBroker) GetMarketDepth(string) (executor.BidAskLike, error) {
 	return b.BidAsks[time.Now()], nil
 }
 
-func (b *TestBroker) GetCandles(string) ([]executor.CandleLike, error) {
+func (b *TestBroker) GetCandles(string, time.Time, time.Time) ([]executor.CandleLike, error) {
 	return nil, nil
 }
 
@@ -138,11 +139,12 @@ func (b *TestBroker) GetMarketDepthOption(strike float64, optExpiry time.Time, o
 	return nil, errors.New("API Could not find expiry date")
 }
 
-func (b *TestBroker) GetCandlesOption(float64, time.Time, executor.OptionType) ([]executor.CandleLike, error) {
+func (b *TestBroker) GetCandlesOption(float64, time.Time, executor.OptionType, time.Time, time.Time) ([]executor.CandleLike, error) {
 	return nil, nil
 }
 
 func TestPaperTrade(t *testing.T) {
+	log.SetFlags(log.Lshortfile)
 	testCases := []string{
 		"testcase1.json",
 		"testcase2.json",
@@ -150,9 +152,11 @@ func TestPaperTrade(t *testing.T) {
 		"testcase4.json",
 		"testcase5.json",
 		"testcase6.json",
+		"testcase7.json",
 		// Add more test case file names here
 	}
 	settings := []string{
+		"testcase1settings.json",
 		"testcase1settings.json",
 		"testcase1settings.json",
 		"testcase1settings.json",
