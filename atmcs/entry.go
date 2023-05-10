@@ -40,6 +40,7 @@ func (obj *ATMcs) PaperTrade(tradeType executor.TradeType) {
 	obj.Trade = trade.Trade{
 		InTrade:        true,
 		EntryPositions: obj.makeEntryPositions(tradeType),
+		TimeOfEntry:    obj.GetCurrentTime(),
 	}
 }
 
