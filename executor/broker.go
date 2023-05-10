@@ -61,8 +61,8 @@ type BrokerLike interface {
 	SetCredentialsFilePath(string)
 	GetLTP(string) (float64, error)
 	GetMarketDepth(string) (BidAskLike, error)
-	GetCandles(string) ([]CandleLike, error)
+	GetCandles(string, time.Time, time.Time) ([]CandleLike, error)
 	GetOptionExpiries(string) ([]Expiry, error)
 	GetMarketDepthOption(float64, time.Time, OptionType) (BidAskLike, error)
-	GetCandlesOption(float64, time.Time, OptionType) ([]CandleLike, error)
+	GetCandlesOption(float64, time.Time, OptionType, time.Time, time.Time) ([]CandleLike, error)
 }
