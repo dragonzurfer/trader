@@ -3,5 +3,9 @@
     "quantity": 3600,
     "strikeDiff": 50,
     "minDaysToExpiry": 7,
-    "symbol": "NIFTY"
+    "symbol": "NIFTY",
+    "min_target_percent":0.15,
+    "min_sl_percent":0.05,
+    "min_trail_percent":0.1,
+    "holidays_file_path":"/root/go/src/trader/atmcs/holidays.json"
   }
