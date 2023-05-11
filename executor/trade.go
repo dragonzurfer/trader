@@ -3,7 +3,7 @@ package executor
 import "time"
 
 type ExecutorLike interface {
-	SetBroker(*BrokerLike)
+	SetBroker(BrokerLike)
 	SetTradeFilePath(string)
 	SetSettingsFilesPath(string)
 	InTradingWindow() bool
