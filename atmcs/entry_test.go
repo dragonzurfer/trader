@@ -172,7 +172,7 @@ func TestPaperTrade(t *testing.T) {
 			t.Fatalf("Error getting working directory: %v", err)
 		}
 
-		data, err := ioutil.ReadFile(filepath.Join(wd, "testcases", tc))
+		data, err := ioutil.ReadFile(filepath.Join(wd, "testcases", "entry", tc))
 		if err != nil {
 			t.Fatalf("Error reading test case file: %v", err)
 		}
@@ -188,7 +188,7 @@ func TestPaperTrade(t *testing.T) {
 		if err != nil {
 			t.Fatalf("Error getting current file path: %v", err)
 		}
-		settingsFilePath := filepath.Join(currentFilePath, "testcases", settingsFileName)
+		settingsFilePath := filepath.Join(currentFilePath, "testcases", "entry", settingsFileName)
 		//create obj
 		LoadTimeLocation()
 		actualObj := atmcs.New(settingsFilePath, currentFilePath, func() time.Time { return testCase.CurrentTime })
