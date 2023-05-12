@@ -217,6 +217,10 @@ func TestPaperTrade(t *testing.T) {
 			entryActual := actualObj.Trade.EntryPositions[i]
 			entryExpected := testCase.ExpectedTrade.EntryPositions[i]
 
+			if actualObj.Trade.TimeOfEntry != testCase.CurrentTime {
+				t.Fatalf("Actual:%v\nExpected:%v\n",actualObj.Trade.TimeOfEntry,testCase.CurrentTime)
+			}
+
 			// Compare Expiry field
 			if !entryActual.GetExpiry().Equal(entryExpected.GetExpiry()) {
 				t.Fatalf("\nActual Expiry: %+v\nExpected Expiry: %+v\n", entryActual.GetExpiry(), entryExpected.GetExpiry())

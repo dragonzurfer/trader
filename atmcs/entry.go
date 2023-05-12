@@ -9,7 +9,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/dragonzurfer/trader/atmcs/trade"
 	"github.com/dragonzurfer/trader/executor"
 )
 
@@ -39,11 +38,9 @@ func (o Option) GetOptionSymbol() string            { return o.Symbol }
 func (o Option) GetUnderlyingSymbol() string        { return o.UnderlyingSymbol }
 
 func (obj *ATMcs) PaperTrade(tradeType executor.TradeType) {
-	obj.Trade = trade.Trade{
-		InTrade:        true,
-		EntryPositions: obj.makeEntryPositions(tradeType),
-		TimeOfEntry:    obj.GetCurrentTime(),
-	}
+	obj.Trade.InTrade = true
+	obj.Trade.EntryPositions = obj.makeEntryPositions(tradeType)
+	obj.Trade.TimeOfEntry = obj.GetCurrentTime()
 }
 
 func (obj *ATMcs) makeEntryPositions(tradeType executor.TradeType) []executor.OptionPositionLike {

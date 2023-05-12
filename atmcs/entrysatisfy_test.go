@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
+	"math"
 	"os"
 	"path/filepath"
 	"testing"
@@ -181,8 +182,15 @@ func TestIsEntrySatisfied(t *testing.T) {
 			t.Fatal("failed")
 		}
 		if actualObjATMcs.EntrySatisfied == false {
-			t.Fatal("EntrSatisfied variable not set")
+			t.Fatal("EntrySatisfied variable true when is satisfied is false")
 		}
+		if actualObjATMcs.Trade.TargetPrice == math.SmallestNonzeroFloat64 {
+			t.Fatal("Target not set")
+		}
+		if actualObjATMcs.Trade.StopLossPrice == math.SmallestNonzeroFloat64 {
+			t.Fatal("SL not set")
+		}
+
 	}
 
 }
@@ -230,6 +238,15 @@ func TestIsEntryNotSatisfied(t *testing.T) {
 		}
 		if actualObjATMcs.EntrySatisfied == true {
 			t.Fatal("EntrySatisfied variable true when is satisfied is false")
+		}
+		if actualObjATMcs.ExitSatisfied == true {
+			t.Fatal("ExitSatisfied variable is set to true")
+		}
+		if actualObjATMcs.Trade.TargetPrice != math.SmallestNonzeroFloat64 {
+			t.Fatal("Target not set to min float64")
+		}
+		if actualObjATMcs.Trade.StopLossPrice != math.SmallestNonzeroFloat64 {
+			t.Fatal("SL not set to min float64")
 		}
 	}
 

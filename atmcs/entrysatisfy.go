@@ -3,6 +3,7 @@ package atmcs
 import (
 	"errors"
 	"log"
+	"math"
 	"time"
 
 	cpr "github.com/dragonzurfer/strategy/CPR"
@@ -19,17 +20,28 @@ func (obj *ATMcs) IsEntrySatisfied() bool {
 	}
 
 	obj.SignalCPR = cpr.GetCPRSignal(minSLPercent, minTargetPercent, previousDayCandle, currentDayCandles)
-	obj.EntrySatisfied = false
-	obj.Trade.TradeType = executor.Nuetral
+	obj.SetEntryStates()
+	return obj.EntrySatisfied
+}
+
+func (obj *ATMcs) SetEntryStates() {
+	if obj.SignalCPR.Signal == cpr.Neutral {
+		obj.EntrySatisfied = false
+		obj.Trade.TradeType = executor.Nuetral
+		obj.Trade.TargetPrice = math.SmallestNonzeroFloat64
+		obj.Trade.StopLossPrice = math.SmallestNonzeroFloat64
+		return
+	}
+	obj.EntrySatisfied = true
+	obj.ExitSatisfied = false
+	obj.Trade.TargetPrice = obj.SignalCPR.TargetPrice
+	obj.Trade.StopLossPrice = obj.SignalCPR.StopLossPrice
 	switch obj.SignalCPR.Signal {
 	case cpr.Buy:
-		obj.EntrySatisfied = true
 		obj.Trade.TradeType = executor.Buy
 	case cpr.Sell:
-		obj.EntrySatisfied = true
 		obj.Trade.TradeType = executor.Sell
 	}
-	return obj.EntrySatisfied
 }
 
 func (obj *ATMcs) GetCandles() (cpr.CPRCandles, cpr.CPRCandles, error) {

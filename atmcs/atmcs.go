@@ -79,10 +79,6 @@ func (obj *ATMcs) InTrade() bool {
 	return obj.Trade.InTrade
 }
 
-func (obj *ATMcs) IsExitSatisfied() bool {
-	return true
-}
-
 func (obj *ATMcs) GetExitMessage() string {
 	return ""
 }
@@ -145,6 +141,10 @@ func New(settingsFilePath, tradeFilePath string, currentTimeFunc func() time.Tim
 	}
 	if obj.Settings.TickSize <= 0 {
 		log.Println("error loading tick size, cannot be <= 0")
+		return nil
+	}
+	if obj.Settings.MinTargetPercent < obj.Settings.MinTrailPercent {
+		log.Println("min target cananot be lesser than min trail in settings")
 		return nil
 	}
 	obj.SetTradeFilePath(tradeFilePath)
