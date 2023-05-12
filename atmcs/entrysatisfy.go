@@ -2,10 +2,12 @@ package atmcs
 
 import (
 	"errors"
+	"fmt"
 	"log"
 	"time"
 
 	cpr "github.com/dragonzurfer/strategy/CPR"
+	"github.com/dragonzurfer/trader/executor"
 )
 
 func (obj *ATMcs) IsEntrySatisfied() bool {
@@ -13,13 +15,23 @@ func (obj *ATMcs) IsEntrySatisfied() bool {
 	minSLPercent := obj.Settings.MinStopLossPercent
 	previousDayCandle, currentDayCandles, err := obj.GetCandles()
 	if err != nil {
-		log.Println("Failed to get candle data:", err.Error())
+		log.Println("error in IsEntrySatisfied():", err.Error())
 		return false
 	}
 
 	obj.SignalCPR = cpr.GetCPRSignal(minSLPercent, minTargetPercent, previousDayCandle, currentDayCandles)
-	obj.EntrySatisfied = true
-	return true
+	obj.EntrySatisfied = false
+	obj.Trade.TradeType = executor.Nuetral
+	fmt.Println(obj.SignalCPR)
+	switch obj.SignalCPR.Signal {
+	case cpr.Buy:
+		obj.EntrySatisfied = true
+		obj.Trade.TradeType = executor.Buy
+	case cpr.Sell:
+		obj.EntrySatisfied = true
+		obj.Trade.TradeType = executor.Sell
+	}
+	return obj.EntrySatisfied
 }
 
 func (obj *ATMcs) GetCandles() (cpr.CPRCandles, cpr.CPRCandles, error) {
@@ -27,11 +39,11 @@ func (obj *ATMcs) GetCandles() (cpr.CPRCandles, cpr.CPRCandles, error) {
 	previousDate := obj.GetPreviousNonWeekendNonHolidayDate(currentTime)
 	currentDay5minCandles, err := obj.GetCurrentDayCandleData5minFyers(currentTime)
 	if err != nil {
-		return nil, nil, errors.New("Error Getting current day 5min candle data: " + err.Error())
+		return nil, nil, errors.New("error in GetCandles() current day 5min candle data: " + err.Error())
 	}
 	previousDayCandles, err := obj.GetPreviousDayCandleDataFyers(previousDate)
 	if err != nil {
-		return nil, nil, errors.New("Error Getting previous day candle data: " + err.Error())
+		return nil, nil, errors.New("error in GetCandles() getting previous day candle data: " + err.Error())
 	}
 	if currentDay5minCandles.GetCandlesLength() < 1 {
 		return nil, nil, errors.New("zero candles returned on 5minute data API call to broker")

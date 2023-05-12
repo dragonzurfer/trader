@@ -1,9 +1,9 @@
 {
-    "current_time": "2023-05-01T00:00:00+05:30",
-    "ltp": 17124,
+    "current_time": "2023-05-17T00:00:00+05:30",
+    "ltp": 17150,
     "signal": {
       "Signal": "BUY",
-      "EntryPrice": 17124,
+      "EntryPrice": 17150,
       "StopLossPrice": 17100,
       "TargetPrice": 17200,
       "TargetLevels": null,
@@ -15,22 +15,22 @@
       "trail_sl": 0,
       "entry_positions": [
         {
-          "expiry": "2023-05-11T00:00:00+05:30",
-          "strike": 17200,
-          "type": "PE",
-          "symbol": "NSE:NIFTY50-INDEX",
-          "underlying_symbol": "NSE:NIFTY50-INDEX",
-          "price": 97,
-          "trade_type": "Sell",
-          "quantity": 3600
-        },
-        {
           "expiry": "2023-05-25T00:00:00+05:30",
           "strike": 17200,
           "type": "PE",
           "symbol": "NSE:NIFTY50-INDEX",
           "underlying_symbol": "NSE:NIFTY50-INDEX",
-          "price": 130.5,
+          "price": 130,
+          "trade_type": "Sell",
+          "quantity": 3600
+        },
+        {
+          "expiry": "2023-06-29T00:00:00+05:30",
+          "strike": 17200,
+          "type": "PE",
+          "symbol": "NSE:NIFTY50-INDEX",
+          "underlying_symbol": "NSE:NIFTY50-INDEX",
+          "price": 172.5,
           "trade_type": "Buy",
           "quantity": 1800
         }
@@ -152,7 +152,7 @@
         ],
         "asks": [
           {
-            "price": 172,
+            "price": 172.469,
             "quantity": 20,
             "num_of_orders": 1
           }

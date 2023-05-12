@@ -37,6 +37,7 @@ type Settings struct {
 	StrikeDiff           float64 `json:"strikeDiff"`
 	MinDaysToExpiry      int64   `json:"minDaysToExpiry"`
 	Symbol               string  `json:"symbol"`
+	TickSize             float64 `json:"tick_size"`
 }
 
 func (obj *ATMcs) loadSettingsFromFile() error {
@@ -66,11 +67,8 @@ func (obj *ATMcs) SetTradeFilePath(filepath string) {
 	obj.TradeFilePath = filepath
 }
 
-func (obj *ATMcs) SetSettingsFilesPath(filepath string) error {
-	var err error
+func (obj *ATMcs) SetSettingsFilesPath(filepath string) {
 	obj.SettingsFilesPath = filepath
-	err = obj.loadSettingsFromFile()
-	return err
 }
 
 func (obj *ATMcs) InTradingWindow() bool {
@@ -121,18 +119,32 @@ func (obj *ATMcs) LoadHolidays() error {
 	return nil
 }
 
+func (obj *ATMcs) AccountTrade(executor.TradeType) {
+
+}
+
+func (obj *ATMcs) GetTradeType() executor.TradeType {
+	return obj.Trade.TradeType
+}
+
 func New(settingsFilePath, tradeFilePath string, currentTimeFunc func() time.Time) *ATMcs {
 	var obj ATMcs
-	if err := obj.SetSettingsFilesPath(settingsFilePath); err != nil {
-		log.Println("error loading settings file:", err.Error())
+	obj.SetSettingsFilesPath(settingsFilePath)
+
+	if err := obj.loadSettingsFromFile(); err != nil {
+		log.Println("SetSettingsFIlesPath(string) failed to load settings from", obj.SettingsFilesPath)
 		return nil
 	}
 	if err := obj.LoadHolidays(); err != nil {
-		log.Printf("error loading holidays file from %+v:%v\n", obj.Settings.HolidayDatesFilePath, err.Error())
+		log.Printf("LoadHolidays() file from %+v:%v\n", obj.Settings.HolidayDatesFilePath, err.Error())
 		return nil
 	}
 	if err := obj.LoadLocation(); err != nil {
 		log.Println("error loading ist location:", err.Error())
+		return nil
+	}
+	if obj.Settings.TickSize <= 0 {
+		log.Println("error loading tick size, cannot be <= 0")
 		return nil
 	}
 	obj.SetTradeFilePath(tradeFilePath)

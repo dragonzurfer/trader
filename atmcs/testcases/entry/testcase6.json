@@ -18,8 +18,8 @@
           "expiry": "2023-12-25T00:00:00+05:30",
           "strike": 17200,
           "type": "PE",
-          "symbol": "NIFTY",
-          "underlying_symbol": "NIFTY",
+          "symbol": "NSE:NIFTY50-INDEX",
+          "underlying_symbol": "NSE:NIFTY50-INDEX",
           "price": 130,
           "trade_type": "Sell",
           "quantity": 3600
@@ -28,8 +28,8 @@
           "expiry": "2024-01-29T00:00:00+05:30",
           "strike": 17200,
           "type": "PE",
-          "symbol": "NIFTY",
-          "underlying_symbol": "NIFTY",
+          "symbol": "NSE:NIFTY50-INDEX",
+          "underlying_symbol": "NSE:NIFTY50-INDEX",
           "price": 172,
           "trade_type": "Buy",
           "quantity": 1800

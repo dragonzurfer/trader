@@ -164,8 +164,8 @@ func GenerateOptionPosition(strike float64, exp time.Time, optTyp executor.Optio
 		exp,
 		strike,
 		optTyp,
-		"NIFTY",
-		"NIFTY",
+		"NSE:NIFTY50-INDEX",
+		"NSE:NIFTY50-INDEX",
 	}
 	optPos := OptionPosition{
 		option,

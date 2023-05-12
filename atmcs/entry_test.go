@@ -153,9 +153,11 @@ func TestPaperTrade(t *testing.T) {
 		"testcase5.json",
 		"testcase6.json",
 		"testcase7.json",
+		"testcase8.json",
 		// Add more test case file names here
 	}
 	settings := []string{
+		"testcase1settings.json",
 		"testcase1settings.json",
 		"testcase1settings.json",
 		"testcase1settings.json",

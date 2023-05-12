@@ -1,86 +1,170 @@
 package atmcs_test
 
-// func TestIsEntrySatisfied(t *testing.T) {
-// 	LoadTimeLocation()
-// 	log.SetFlags(log.Lshortfile)
-// 	historicalTime := []string{
-// 		"2023-05-01T00:00:00+05:30",
-// 	}
-// 	settings := []string{
-// 		"testcase1settings.json",
-// 	}
+import (
+	"encoding/json"
+	"errors"
+	"fmt"
+	"io/ioutil"
+	"log"
+	"os"
+	"path/filepath"
+	"testing"
+	"time"
 
-// 	for i, timeString := range historicalTime {
-// 		fmt.Println("Running for time: ", timeString)
-// 		timeObj := // convert timeString from string to time.Time object
+	fyers "github.com/dragonzurfer/fyersgo"
+	"github.com/dragonzurfer/fyersgo/api"
+	"github.com/dragonzurfer/trader/atmcs"
+	"github.com/dragonzurfer/trader/executor"
+)
 
-// 		settingsFileName := settings[0]
-// 		currentFilePath, err := os.Getwd()
-// 		if err != nil {
-// 			t.Fatalf("Error getting current file path: %v", err)
-// 		}
-// 		settingsFilePath := filepath.Join(currentFilePath, "testcases", settingsFileName)
-// 		actualObj := atmcs.New(settingsFilePath, currentFilePath, func() time.Time { return timeObj })
-// 		var broker TestBroker
-// 		broker.Expiries = testCase.OptionExpiries
-// 		broker.BidAsks = testCase.OptionDepths
-// 		broker.LTP = testCase.LTP
+type BrokerCandleLikeAdapter struct {
+	candle api.Candle
+}
 
-// 		actualObj.SetBroker(&broker)
-// 		if testCase.Signal.Signal == cpr.Buy {
-// 			actualObj.PaperTrade(executor.Buy)
-// 		} else {
-// 			actualObj.PaperTrade(executor.Sell)
-// 		}
-// 		// see if atmcs.Trade == TestCase.ExpectedTrade
-// 		fmt.Printf("\nExpected:%+v\nActual:%+v\n", testCase.ExpectedTrade.EntryPositions, actualObj.Trade.EntryPositions)
-// 		if len(actualObj.Trade.EntryPositions) != len(testCase.ExpectedTrade.EntryPositions) {
-// 			t.Fatalf("\nActual:%+v\nExpected:%+v\n", len(actualObj.Trade.EntryPositions), len(testCase.ExpectedTrade.EntryPositions))
-// 		}
-// 		for i := 0; i < len(actualObj.Trade.EntryPositions); i++ {
-// 			entryActual := actualObj.Trade.EntryPositions[i]
-// 			entryExpected := testCase.ExpectedTrade.EntryPositions[i]
+func (cla *BrokerCandleLikeAdapter) GetOpen() float64 {
+	return float64(cla.candle.OpenValue)
+}
 
-// 			// Compare Expiry field
-// 			if !entryActual.GetExpiry().Equal(entryExpected.GetExpiry()) {
-// 				t.Fatalf("\nActual Expiry: %+v\nExpected Expiry: %+v\n", entryActual.GetExpiry(), entryExpected.GetExpiry())
-// 			}
+func (cla *BrokerCandleLikeAdapter) GetHigh() float64 {
+	return float64(cla.candle.HighestValue)
+}
 
-// 			// Compare Strike field
-// 			if entryActual.GetStrike() != entryExpected.GetStrike() {
-// 				t.Fatalf("\nActual Strike: %f\nExpected Strike: %f\n", entryActual.GetStrike(), entryExpected.GetStrike())
-// 			}
+func (cla *BrokerCandleLikeAdapter) GetLow() float64 {
+	return float64(cla.candle.LowestValue)
+}
 
-// 			// Compare Type field
-// 			if entryActual.GetOptionType() != entryExpected.GetOptionType() {
-// 				t.Fatalf("\nActual Type: %s\nExpected Type: %s\n", entryActual.GetOptionType(), entryExpected.GetOptionType())
-// 			}
+func (cla *BrokerCandleLikeAdapter) GetClose() float64 {
+	return float64(cla.candle.CloseValue)
+}
 
-// 			// Compare Symbol field
-// 			if entryActual.GetOptionSymbol() != entryExpected.GetOptionSymbol() {
-// 				t.Fatalf("\nActual Symbol: %s\nExpected Symbol: %s\n", entryActual.GetOptionSymbol(), entryExpected.GetOptionSymbol())
-// 			}
+func (cla *BrokerCandleLikeAdapter) GetVolume() float64 {
+	return float64(cla.candle.Volume)
+}
 
-// 			// Compare UnderlyingSymbol field
-// 			if entryActual.GetUnderlyingSymbol() != entryExpected.GetUnderlyingSymbol() {
-// 				t.Fatalf("\nActual UnderlyingSymbol: %s\nExpected UnderlyingSymbol: %s\n", entryActual.GetUnderlyingSymbol(), entryExpected.GetUnderlyingSymbol())
-// 			}
+func (cla *BrokerCandleLikeAdapter) GetOI() float64 {
+	// The original API does not provide OI (Open Interest), so we return a default value.
+	return 0
+}
 
-// 			// Compare Price field
-// 			if entryActual.GetPrice() != entryExpected.GetPrice() {
-// 				t.Fatalf("\nActual Price: %f\nExpected Price: %f\n", entryActual.GetPrice(), entryExpected.GetPrice())
-// 			}
+func NewBrokerCandleLikeAdapter(candles []api.Candle) []executor.CandleLike {
+	candleLike := make([]executor.CandleLike, len(candles))
+	for i, c := range candles {
+		candleLike[i] = &BrokerCandleLikeAdapter{candle: c}
+	}
+	return candleLike
+}
 
-// 			// Compare TradeType field
-// 			if entryActual.GetTradeType() != entryExpected.GetTradeType() {
-// 				t.Fatalf("\nActual TradeType: %s\nExpected TradeType: %s\n", entryActual.GetTradeType(), entryExpected.GetTradeType())
-// 			}
+type RealBroker struct {
+	LTP         float64
+	Expiries    []executor.Expiry
+	BidAsks     map[time.Time]BidAsk
+	ApiKey      string
+	AccessToken string
+}
 
-// 			// Compare Quantity field
-// 			if entryActual.GetQuantity() != entryExpected.GetQuantity() {
-// 				t.Fatalf("\nActual Quantity: %d\nExpected Quantity: %d\n", entryActual.GetQuantity(), entryExpected.GetQuantity())
-// 			}
-// 		}
+func (b *RealBroker) SetCredentialsFilePath(string) {}
 
-// 	}
-// }
+func (b *RealBroker) GetLTP(string) (float64, error) {
+	return b.LTP, nil
+}
+
+func (b *RealBroker) GetMarketDepth(string) (executor.BidAskLike, error) {
+	return b.BidAsks[time.Now()], nil
+}
+
+func (b *RealBroker) GetCandles(symbol string, startTime time.Time, endTime time.Time) ([]executor.CandleLike, error) {
+	cli := fyers.New(b.ApiKey, b.AccessToken)
+	data, err := cli.GetHistoricalData(symbol, api.Minute5, startTime, endTime)
+	if err != nil {
+		return nil, errors.New("failed to get candles from fyers:" + err.Error())
+	}
+	candles := NewBrokerCandleLikeAdapter(data.Candles)
+	for _, candle := range candles {
+		fmt.Println(candle.GetHigh(), candle.GetLow(), candle.GetClose())
+	}
+	return candles, nil
+}
+
+func (b *RealBroker) GetOptionExpiries(string) ([]executor.Expiry, error) {
+	return b.Expiries, nil
+}
+
+func (b *RealBroker) GetMarketDepthOption(strike float64, optExpiry time.Time, optType executor.OptionType) (executor.BidAskLike, error) {
+	for expiry, bidask := range b.BidAsks {
+		if expiry == optExpiry {
+			return bidask, nil
+		}
+	}
+	return nil, errors.New("API Could not find expiry date")
+}
+
+func (b *RealBroker) GetCandlesOption(float64, time.Time, executor.OptionType, time.Time, time.Time) ([]executor.CandleLike, error) {
+	return nil, nil
+}
+
+func NewRealBroker(t *testing.T) RealBroker {
+	type Creds struct {
+		AccessToken string `json:"access_token"`
+		ApiKey      string `json:"api_key"`
+	}
+	var cred Creds
+	currentFilePath, err := os.Getwd()
+	if err != nil {
+		t.Fatalf("Error getting current file path: %v", err)
+	}
+	credentialsPath := filepath.Join(currentFilePath, "credentials.json")
+	data, err := ioutil.ReadFile(credentialsPath)
+	if err != nil {
+		t.Fatalf("Error reading test case file: %v", err)
+	}
+	json.Unmarshal(data, &cred)
+
+	broker := RealBroker{
+		ApiKey:      cred.ApiKey,
+		AccessToken: cred.AccessToken,
+	}
+	return broker
+}
+
+func TestIsEntrySatisfied(t *testing.T) {
+	LoadTimeLocation()
+	log.SetFlags(log.Lshortfile)
+	historicalTime := []string{
+		"2023-05-02T10:15:00+05:30",
+		"2023-05-11T13:34:59+05:30",
+		"2023-05-12T09:45:00+05:30",
+	}
+	settings := []string{
+		"testcase1settings.json",
+		"testcase1settings.json",
+		"testcase1settings.json",
+	}
+
+	for i, timeString := range historicalTime {
+		fmt.Println("Running for time: ", timeString)
+		timeObj, err := time.Parse("2006-01-02T15:04:05-07:00", timeString)
+		if err != nil {
+			t.Fatal("Error parsing time:", err)
+			return
+		}
+
+		settingsFileName := settings[i]
+		currentFilePath, err := os.Getwd()
+		if err != nil {
+			t.Fatalf("Error getting current file path: %v", err)
+		}
+		settingsFilePath := filepath.Join(currentFilePath, "testcases", "entrysatisfy", settingsFileName)
+		var actualObj executor.ExecutorLike
+		actualObj = atmcs.New(settingsFilePath, currentFilePath, func() time.Time { return timeObj })
+		if actualObj == nil {
+			t.Fatalf("ATMcs object init fail")
+		}
+		broker := NewRealBroker(t)
+		actualObj.SetBroker(&broker)
+		fmt.Println(actualObj.GetTradeType())
+		if actualObj.IsEntrySatisfied() != false {
+			t.Fatalf("entry is satisfied:%+v", actualObj.GetTradeType())
+		}
+	}
+	
+}

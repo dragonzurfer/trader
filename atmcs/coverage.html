@@ -376,7 +376,7 @@ func MakeEntryPosition(symbol string, strike float64, expiry executor.Expiry, op
                 Strike:           strike,
                 Expiry:           expiry.ExpiryDate,
                 Type:             optionType,
-                Symbol:           "NIFTY", //change to broker symbol
+                Symbol:           "NSE:NIFTY50-INDEX", //change to broker symbol
                 UnderlyingSymbol: symbol,
         }
         optionPosition := OptionPosition{

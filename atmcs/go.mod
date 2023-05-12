@@ -7,4 +7,17 @@ require (
 	github.com/dragonzurfer/trader/executor v0.0.0-20230510185944-602c8cb10c85
 )
 
-require github.com/dragonzurfer/revclose v1.0.1
+require (
+	github.com/dragonzurfer/fyersgo v1.0.2
+	github.com/dragonzurfer/fyersgo/api v0.0.0-20230506120707-342d6521bb57
+	github.com/dragonzurfer/revclose v1.0.1
+)
+
+require (
+	github.com/dragonzurfer/fyersgo/utils v0.0.0-20230507055045-8ada8c1b3662 // indirect
+	github.com/sirupsen/logrus v1.9.0 // indirect
+	github.com/tidwall/gjson v1.14.4 // indirect
+	github.com/tidwall/match v1.1.1 // indirect
+	github.com/tidwall/pretty v1.2.0 // indirect
+	golang.org/x/sys v0.0.0-20220715151400-c0bba94af5f8 // indirect
+)

@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"log"
 	"math"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/dragonzurfer/trader/atmcs/trade"
@@ -78,11 +80,11 @@ func (obj *ATMcs) makeEntryPositions(tradeType executor.TradeType) []executor.Op
 	var sellPosition, buyPosition OptionPosition
 	var entryPositions []executor.OptionPositionLike
 	if tradeType == executor.Buy {
-		sellPosition = MakeEntryPosition(symbol, strike, sellExpiry, executor.PutOption, executor.Sell, quantity)
-		buyPosition = MakeEntryPosition(symbol, strike, buyExpiry, executor.PutOption, executor.Buy, quantity/2)
+		sellPosition = obj.MakeEntryPosition(symbol, strike, sellExpiry, executor.PutOption, executor.Sell, quantity)
+		buyPosition = obj.MakeEntryPosition(symbol, strike, buyExpiry, executor.PutOption, executor.Buy, quantity/2)
 	} else {
-		sellPosition = MakeEntryPosition(symbol, strike, sellExpiry, executor.CallOption, executor.Sell, quantity)
-		buyPosition = MakeEntryPosition(symbol, strike, buyExpiry, executor.CallOption, executor.Buy, quantity/2)
+		sellPosition = obj.MakeEntryPosition(symbol, strike, sellExpiry, executor.CallOption, executor.Sell, quantity)
+		buyPosition = obj.MakeEntryPosition(symbol, strike, buyExpiry, executor.CallOption, executor.Buy, quantity/2)
 	}
 	bids, err := GetBids(obj.Broker, sellPosition)
 	if err != nil {
@@ -94,18 +96,18 @@ func (obj *ATMcs) makeEntryPositions(tradeType executor.TradeType) []executor.Op
 		log.Println(err.Error())
 		return nil
 	}
-	sellPosition.Price = GetAvgMarketDepth(bids)
-	buyPosition.Price = GetAvgMarketDepth(asks)
+	sellPosition.Price = obj.GetAvgMarketDepth(bids)
+	buyPosition.Price = obj.GetAvgMarketDepth(asks)
 	entryPositions = append(entryPositions, sellPosition, buyPosition)
 	return entryPositions
 }
 
-func MakeEntryPosition(symbol string, strike float64, expiry executor.Expiry, optionType executor.OptionType, tradeType executor.TradeType, quantity int64) OptionPosition {
+func (obj *ATMcs) MakeEntryPosition(symbol string, strike float64, expiry executor.Expiry, optionType executor.OptionType, tradeType executor.TradeType, quantity int64) OptionPosition {
 	option := Option{
 		Strike:           strike,
 		Expiry:           expiry.ExpiryDate,
 		Type:             optionType,
-		Symbol:           "NIFTY", //change to broker symbol
+		Symbol:           obj.Symbol, //change to broker symbol
 		UnderlyingSymbol: symbol,
 	}
 	optionPosition := OptionPosition{
@@ -116,7 +118,7 @@ func MakeEntryPosition(symbol string, strike float64, expiry executor.Expiry, op
 	return optionPosition
 }
 
-func GetAvgMarketDepth(depth []executor.MarketDepthLike) float64 {
+func (obj *ATMcs) GetAvgMarketDepth(depth []executor.MarketDepthLike) float64 {
 	if len(depth) == 0 {
 		return 0
 	}
@@ -134,8 +136,12 @@ func GetAvgMarketDepth(depth []executor.MarketDepthLike) float64 {
 	}
 
 	avgPrice := total / totalVolumeOrders
-	roundedPrice := roundToNearest(avgPrice, 0.05)
-
+	roundedPrice := roundToNearest(avgPrice, obj.Settings.TickSize)
+	if roundedPrice < avgPrice {
+		roundedPrice += obj.Settings.TickSize
+	}
+	decimalPlaces := countDecimalPlaces(obj.Settings.TickSize)
+	roundedPrice = truncateDecimal(roundedPrice, decimalPlaces)
 	return roundedPrice
 }
 
@@ -230,6 +236,25 @@ func GetNearest100ITMStrike(ltp float64, tradeType executor.TradeType) float64 {
 }
 
 func roundToNearest(val, roundTo float64) float64 {
-	rounded := roundTo * float64(int(val/roundTo+0.5))
+	if roundTo == 0 {
+		return val
+	}
+	rounded := roundTo * float64(int(val/roundTo))
 	return rounded
+}
+
+func countDecimalPlaces(val float64) int {
+	str := strconv.FormatFloat(val, 'f', -1, 64)
+	parts := strings.Split(str, ".")
+	if len(parts) == 2 {
+		return len(parts[1])
+	}
+	return 0
+}
+
+func truncateDecimal(val float64, decimalPlaces int) float64 {
+	shift := math.Pow(10, float64(decimalPlaces))
+	truncated := math.Floor(val*shift) / shift
+
+	return truncated
 }
