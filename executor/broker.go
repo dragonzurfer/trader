@@ -39,6 +39,23 @@ const (
 	Nuetral TradeType = "Neutral"
 )
 
+type TimeFrame string
+
+const (
+	Day      TimeFrame = "1Day"
+	Minute   TimeFrame = "min"
+	Minute5  TimeFrame = "5min"
+	Minute15 TimeFrame = "15min"
+	Minute30 TimeFrame = "30min"
+	Minute45 TimeFrame = "45min"
+	Hour     TimeFrame = "1hour"
+	Hour4    TimeFrame = "4hour"
+	Month    TimeFrame = "1month"
+	Month3   TimeFrame = "3month"
+	Month6   TimeFrame = "6month"
+	Year     TimeFrame = "1year"
+)
+
 type OptionLike interface {
 	GetExpiry() time.Time
 	GetStrike() float64
@@ -62,7 +79,7 @@ type BrokerLike interface {
 	SetCredentialsFilePath(string)
 	GetLTP(string) (float64, error)
 	GetMarketDepth(string) (BidAskLike, error)
-	GetCandles(string, time.Time, time.Time) ([]CandleLike, error)
+	GetCandles(string, time.Time, time.Time, TimeFrame) ([]CandleLike, error)
 	GetOptionExpiries(string) ([]Expiry, error)
 	GetMarketDepthOption(float64, time.Time, OptionType) (BidAskLike, error)
 	GetCandlesOption(float64, time.Time, OptionType, time.Time, time.Time) ([]CandleLike, error)
