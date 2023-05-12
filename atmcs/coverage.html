@@ -55,13 +55,15 @@
 			<div id="nav">
 				<select id="files">
 				
-				<option value="file0">github.com/dragonzurfer/trader/atmcs/atmcs.go (60.0%)</option>
+				<option value="file0">github.com/dragonzurfer/trader/atmcs/atmcs.go (58.5%)</option>
 				
-				<option value="file1">github.com/dragonzurfer/trader/atmcs/candleadapter.go (0.0%)</option>
+				<option value="file1">github.com/dragonzurfer/trader/atmcs/candleadapter.go (87.5%)</option>
 				
-				<option value="file2">github.com/dragonzurfer/trader/atmcs/entry.go (82.9%)</option>
+				<option value="file2">github.com/dragonzurfer/trader/atmcs/entry.go (81.7%)</option>
 				
-				<option value="file3">github.com/dragonzurfer/trader/atmcs/entrysatisfy.go (0.0%)</option>
+				<option value="file3">github.com/dragonzurfer/trader/atmcs/entrysatisfy.go (73.3%)</option>
+				
+				<option value="file4">github.com/dragonzurfer/trader/atmcs/message.go (0.0%)</option>
 				
 				</select>
 			</div>
@@ -90,7 +92,7 @@ import (
 
 type ATMcs struct {
         ISTLocation    *time.Location
-        Signal         cpr.Signal
+        SignalCPR      cpr.Signal
         EntrySatisfied bool
         ExitSatisfied  bool
         Broker         executor.BrokerLike
@@ -114,6 +116,7 @@ type Settings struct {
         StrikeDiff           float64 `json:"strikeDiff"`
         MinDaysToExpiry      int64   `json:"minDaysToExpiry"`
         Symbol               string  `json:"symbol"`
+        TickSize             float64 `json:"tick_size"`
 }
 
 func (obj *ATMcs) loadSettingsFromFile() error <span class="cov8" title="1">{
@@ -143,11 +146,8 @@ func (obj *ATMcs) SetTradeFilePath(filepath string) <span class="cov8" title="1"
         obj.TradeFilePath = filepath
 }</span>
 
-func (obj *ATMcs) SetSettingsFilesPath(filepath string) error <span class="cov8" title="1">{
-        var err error
+func (obj *ATMcs) SetSettingsFilesPath(filepath string) <span class="cov8" title="1">{
         obj.SettingsFilesPath = filepath
-        err = obj.loadSettingsFromFile()
-        return err
 }</span>
 
 func (obj *ATMcs) InTradingWindow() bool <span class="cov0" title="0">{
@@ -161,9 +161,7 @@ func (obj *ATMcs) InTrade() bool <span class="cov0" title="0">{
 func (obj *ATMcs) IsExitSatisfied() bool <span class="cov0" title="0">{
         return true
 }</span>
-func (obj *ATMcs) GetEntryMessage() string <span class="cov0" title="0">{
-        return ""
-}</span>
+
 func (obj *ATMcs) GetExitMessage() string <span class="cov0" title="0">{
         return ""
 }</span>
@@ -200,22 +198,38 @@ func (obj *ATMcs) LoadHolidays() error <span class="cov8" title="1">{
         return nil</span>
 }
 
+func (obj *ATMcs) AccountTrade(executor.TradeType) {<span class="cov0" title="0">
+
+}</span>
+
+func (obj *ATMcs) GetTradeType() executor.TradeType <span class="cov0" title="0">{
+        return obj.Trade.TradeType
+}</span>
+
 func New(settingsFilePath, tradeFilePath string, currentTimeFunc func() time.Time) *ATMcs <span class="cov8" title="1">{
         var obj ATMcs
-        if err := obj.SetSettingsFilesPath(settingsFilePath); err != nil </span><span class="cov0" title="0">{
-                log.Println("error loading settings file:", err.Error())
+        obj.SetSettingsFilesPath(settingsFilePath)
+
+        if err := obj.loadSettingsFromFile(); err != nil </span><span class="cov0" title="0">{
+                log.Println("SetSettingsFIlesPath(string) failed to load settings from", obj.SettingsFilesPath)
                 return nil
         }</span>
         <span class="cov8" title="1">if err := obj.LoadHolidays(); err != nil </span><span class="cov0" title="0">{
-                log.Printf("error loading holidays file from %+v:%v\n", obj.Settings.HolidayDatesFilePath, err.Error())
+                log.Printf("LoadHolidays() file from %+v:%v\n", obj.Settings.HolidayDatesFilePath, err.Error())
                 return nil
         }</span>
         <span class="cov8" title="1">if err := obj.LoadLocation(); err != nil </span><span class="cov0" title="0">{
                 log.Println("error loading ist location:", err.Error())
                 return nil
         }</span>
+        <span class="cov8" title="1">if obj.Settings.TickSize &lt;= 0 </span><span class="cov0" title="0">{
+                log.Println("error loading tick size, cannot be &lt;= 0")
+                return nil
+        }</span>
         <span class="cov8" title="1">obj.SetTradeFilePath(tradeFilePath)
         obj.GetCurrentTime = currentTimeFunc
+        obj.EntrySatisfied = false
+        obj.ExitSatisfied = false
         return &amp;obj</span>
 }
 </pre>
@@ -235,15 +249,15 @@ type RevCandleAdapter struct {
         candle executor.CandleLike
 }
 
-func (rca *RevCandleAdapter) GetHigh() float64 <span class="cov0" title="0">{
+func (rca *RevCandleAdapter) GetHigh() float64 <span class="cov8" title="1">{
         return rca.candle.GetHigh()
 }</span>
 
-func (rca *RevCandleAdapter) GetLow() float64 <span class="cov0" title="0">{
+func (rca *RevCandleAdapter) GetLow() float64 <span class="cov8" title="1">{
         return rca.candle.GetLow()
 }</span>
 
-func (rca *RevCandleAdapter) GetClose() float64 <span class="cov0" title="0">{
+func (rca *RevCandleAdapter) GetClose() float64 <span class="cov8" title="1">{
         return rca.candle.GetClose()
 }</span>
 
@@ -251,19 +265,19 @@ func (rca *RevCandleAdapter) GetOpen() float64 <span class="cov0" title="0">{
         return rca.candle.GetOpen()
 }</span>
 
-func (rca *RevCandleAdapter) GetOHLC() (float64, float64, float64, float64) <span class="cov0" title="0">{
+func (rca *RevCandleAdapter) GetOHLC() (float64, float64, float64, float64) <span class="cov8" title="1">{
         return rca.candle.GetOpen(), rca.candle.GetHigh(), rca.candle.GetLow(), rca.candle.GetClose()
 }</span>
 
-func (ca *CandleAdapter) GetCandle(index int) revclose.RevCandle <span class="cov0" title="0">{
+func (ca *CandleAdapter) GetCandle(index int) revclose.RevCandle <span class="cov8" title="1">{
         return &amp;RevCandleAdapter{candle: ca.candles[index]}
 }</span>
 
-func (ca *CandleAdapter) GetCandlesLength() int <span class="cov0" title="0">{
+func (ca *CandleAdapter) GetCandlesLength() int <span class="cov8" title="1">{
         return len(ca.candles)
 }</span>
 
-func NewCandleAdapter(candles []executor.CandleLike) *CandleAdapter <span class="cov0" title="0">{
+func NewCandleAdapter(candles []executor.CandleLike) *CandleAdapter <span class="cov8" title="1">{
         return &amp;CandleAdapter{
                 candles: candles,
         }
@@ -277,6 +291,8 @@ import (
         "fmt"
         "log"
         "math"
+        "strconv"
+        "strings"
         "time"
 
         "github.com/dragonzurfer/trader/atmcs/trade"
@@ -312,6 +328,7 @@ func (obj *ATMcs) PaperTrade(tradeType executor.TradeType) <span class="cov8" ti
         obj.Trade = trade.Trade{
                 InTrade:        true,
                 EntryPositions: obj.makeEntryPositions(tradeType),
+                TimeOfEntry:    obj.GetCurrentTime(),
         }
 }</span>
 
@@ -349,11 +366,11 @@ func (obj *ATMcs) makeEntryPositions(tradeType executor.TradeType) []executor.Op
         var sellPosition, buyPosition OptionPosition
         var entryPositions []executor.OptionPositionLike
         if tradeType == executor.Buy </span><span class="cov8" title="1">{
-                sellPosition = MakeEntryPosition(symbol, strike, sellExpiry, executor.PutOption, executor.Sell, quantity)
-                buyPosition = MakeEntryPosition(symbol, strike, buyExpiry, executor.PutOption, executor.Buy, quantity/2)
+                sellPosition = obj.MakeEntryPosition(symbol, strike, sellExpiry, executor.PutOption, executor.Sell, quantity)
+                buyPosition = obj.MakeEntryPosition(symbol, strike, buyExpiry, executor.PutOption, executor.Buy, quantity/2)
         }</span> else<span class="cov8" title="1"> {
-                sellPosition = MakeEntryPosition(symbol, strike, sellExpiry, executor.CallOption, executor.Sell, quantity)
-                buyPosition = MakeEntryPosition(symbol, strike, buyExpiry, executor.CallOption, executor.Buy, quantity/2)
+                sellPosition = obj.MakeEntryPosition(symbol, strike, sellExpiry, executor.CallOption, executor.Sell, quantity)
+                buyPosition = obj.MakeEntryPosition(symbol, strike, buyExpiry, executor.CallOption, executor.Buy, quantity/2)
         }</span>
         <span class="cov8" title="1">bids, err := GetBids(obj.Broker, sellPosition)
         if err != nil </span><span class="cov0" title="0">{
@@ -365,18 +382,18 @@ func (obj *ATMcs) makeEntryPositions(tradeType executor.TradeType) []executor.Op
                 log.Println(err.Error())
                 return nil
         }</span>
-        <span class="cov8" title="1">sellPosition.Price = GetAvgMarketDepth(bids)
-        buyPosition.Price = GetAvgMarketDepth(asks)
+        <span class="cov8" title="1">sellPosition.Price = obj.GetAvgMarketDepth(bids)
+        buyPosition.Price = obj.GetAvgMarketDepth(asks)
         entryPositions = append(entryPositions, sellPosition, buyPosition)
         return entryPositions</span>
 }
 
-func MakeEntryPosition(symbol string, strike float64, expiry executor.Expiry, optionType executor.OptionType, tradeType executor.TradeType, quantity int64) OptionPosition <span class="cov8" title="1">{
+func (obj *ATMcs) MakeEntryPosition(symbol string, strike float64, expiry executor.Expiry, optionType executor.OptionType, tradeType executor.TradeType, quantity int64) OptionPosition <span class="cov8" title="1">{
         option := Option{
                 Strike:           strike,
                 Expiry:           expiry.ExpiryDate,
                 Type:             optionType,
-                Symbol:           "NSE:NIFTY50-INDEX", //change to broker symbol
+                Symbol:           obj.Symbol, //change to broker symbol
                 UnderlyingSymbol: symbol,
         }
         optionPosition := OptionPosition{
@@ -387,7 +404,7 @@ func MakeEntryPosition(symbol string, strike float64, expiry executor.Expiry, op
         return optionPosition
 }</span>
 
-func GetAvgMarketDepth(depth []executor.MarketDepthLike) float64 <span class="cov8" title="1">{
+func (obj *ATMcs) GetAvgMarketDepth(depth []executor.MarketDepthLike) float64 <span class="cov8" title="1">{
         if len(depth) == 0 </span><span class="cov0" title="0">{
                 return 0
         }</span>
@@ -405,8 +422,12 @@ func GetAvgMarketDepth(depth []executor.MarketDepthLike) float64 <span class="co
         }</span>
 
         <span class="cov8" title="1">avgPrice := total / totalVolumeOrders
-        roundedPrice := roundToNearest(avgPrice, 0.05)
-
+        roundedPrice := roundToNearest(avgPrice, obj.Settings.TickSize)
+        if roundedPrice &lt; avgPrice </span><span class="cov8" title="1">{
+                roundedPrice += obj.Settings.TickSize
+        }</span>
+        <span class="cov8" title="1">decimalPlaces := countDecimalPlaces(obj.Settings.TickSize)
+        roundedPrice = truncateDecimal(roundedPrice, decimalPlaces)
         return roundedPrice</span>
 }
 
@@ -490,9 +511,9 @@ func GetNearest100ITMStrike(ltp float64, tradeType executor.TradeType) float64 <
                 if closest100Multiple &lt; ltp </span><span class="cov8" title="1">{
                         return closest100Multiple + 100
                 }</span>
-                <span class="cov8" title="1">return closest100Multiple</span>
+                <span class="cov0" title="0">return closest100Multiple</span>
         case executor.Sell:<span class="cov8" title="1">
-                if closest100Multiple &gt; ltp </span><span class="cov8" title="1">{
+                if closest100Multiple &gt; ltp </span><span class="cov0" title="0">{
                         return closest100Multiple - 100
                 }</span>
                 <span class="cov8" title="1">return closest100Multiple</span>
@@ -501,8 +522,27 @@ func GetNearest100ITMStrike(ltp float64, tradeType executor.TradeType) float64 <
 }
 
 func roundToNearest(val, roundTo float64) float64 <span class="cov8" title="1">{
-        rounded := roundTo * float64(int(val/roundTo+0.5))
-        return rounded
+        if roundTo == 0 </span><span class="cov0" title="0">{
+                return val
+        }</span>
+        <span class="cov8" title="1">rounded := roundTo * float64(int(val/roundTo))
+        return rounded</span>
+}
+
+func countDecimalPlaces(val float64) int <span class="cov8" title="1">{
+        str := strconv.FormatFloat(val, 'f', -1, 64)
+        parts := strings.Split(str, ".")
+        if len(parts) == 2 </span><span class="cov8" title="1">{
+                return len(parts[1])
+        }</span>
+        <span class="cov0" title="0">return 0</span>
+}
+
+func truncateDecimal(val float64, decimalPlaces int) float64 <span class="cov8" title="1">{
+        shift := math.Pow(10, float64(decimalPlaces))
+        truncated := math.Floor(val*shift) / shift
+
+        return truncated
 }</span>
 </pre>
 		
@@ -514,53 +554,71 @@ import (
         "time"
 
         cpr "github.com/dragonzurfer/strategy/CPR"
+        "github.com/dragonzurfer/trader/executor"
 )
 
-func (obj *ATMcs) IsEntrySatisfied() bool <span class="cov0" title="0">{
+func (obj *ATMcs) IsEntrySatisfied() bool <span class="cov8" title="1">{
         minTargetPercent := obj.Settings.MinTargetPercent
         minSLPercent := obj.Settings.MinStopLossPercent
-        previousDayCandle, currentDayCandles, err := obj.GetCandles()
+        currentDayCandles, previousDayCandle, err := obj.GetCandles()
         if err != nil </span><span class="cov0" title="0">{
-                log.Println("Failed to get candle data:", err.Error())
+                log.Println("error in IsEntrySatisfied():", err.Error())
                 return false
         }</span>
-        <span class="cov0" title="0">obj.Signal = cpr.GetCPRSignal(minSLPercent, minTargetPercent, previousDayCandle, currentDayCandles)
-        return true</span>
+
+        <span class="cov8" title="1">obj.SignalCPR = cpr.GetCPRSignal(minSLPercent, minTargetPercent, previousDayCandle, currentDayCandles)
+        obj.EntrySatisfied = false
+        obj.Trade.TradeType = executor.Nuetral
+        switch obj.SignalCPR.Signal </span>{
+        case cpr.Buy:<span class="cov8" title="1">
+                obj.EntrySatisfied = true
+                obj.Trade.TradeType = executor.Buy</span>
+        case cpr.Sell:<span class="cov0" title="0">
+                obj.EntrySatisfied = true
+                obj.Trade.TradeType = executor.Sell</span>
+        }
+        <span class="cov8" title="1">return obj.EntrySatisfied</span>
 }
 
-func (obj *ATMcs) GetCandles() (cpr.CPRCandles, cpr.CPRCandles, error) <span class="cov0" title="0">{
+func (obj *ATMcs) GetCandles() (cpr.CPRCandles, cpr.CPRCandles, error) <span class="cov8" title="1">{
         currentTime := obj.GetCurrentTime()
         previousDate := obj.GetPreviousNonWeekendNonHolidayDate(currentTime)
         currentDay5minCandles, err := obj.GetCurrentDayCandleData5minFyers(currentTime)
         if err != nil </span><span class="cov0" title="0">{
-                return nil, nil, errors.New("Error Getting current day 5min candle data: " + err.Error())
+                return nil, nil, errors.New("error in GetCandles() current day 5min candle data: " + err.Error())
         }</span>
-        <span class="cov0" title="0">previousDayCandles, err := obj.GetPreviousDayCandleDataFyers(previousDate)
+        <span class="cov8" title="1">previousDayCandles, err := obj.GetPreviousDayCandleDataFyers(previousDate)
         if err != nil </span><span class="cov0" title="0">{
-                return nil, nil, errors.New("Error Getting previous day candle data: " + err.Error())
+                return nil, nil, errors.New("error in GetCandles() getting previous day candle data: " + err.Error())
         }</span>
-        <span class="cov0" title="0">return currentDay5minCandles, previousDayCandles, nil</span>
+        <span class="cov8" title="1">if currentDay5minCandles.GetCandlesLength() &lt; 1 </span><span class="cov0" title="0">{
+                return nil, nil, errors.New("zero candles returned on 5minute data API call to broker")
+        }</span>
+        <span class="cov8" title="1">if previousDayCandles.GetCandlesLength() &lt; 1 </span><span class="cov0" title="0">{
+                return nil, nil, errors.New("zero candles returned on 1Day data API call to broker")
+        }</span>
+        <span class="cov8" title="1">return currentDay5minCandles, previousDayCandles, nil</span>
 }
 
-func (obj *ATMcs) GetPreviousDayCandleDataFyers(previousDate time.Time) (cpr.CPRCandles, error) <span class="cov0" title="0">{
+func (obj *ATMcs) GetPreviousDayCandleDataFyers(previousDate time.Time) (cpr.CPRCandles, error) <span class="cov8" title="1">{
         from := time.Date(previousDate.Year(), previousDate.Month(), previousDate.Day(), 9, 15, 0, 0, obj.ISTLocation)
         to := time.Date(previousDate.Year(), previousDate.Month(), previousDate.Day(), 15, 30, 0, 0, obj.ISTLocation)
-        candles, err := obj.Broker.GetCandles(obj.Symbol, from, to)
+        candles, err := obj.Broker.GetCandles(obj.Symbol, from, to, executor.Day)
         if err != nil </span><span class="cov0" title="0">{
                 return nil, err
         }</span>
-        <span class="cov0" title="0">cprCandles := NewCandleAdapter(candles)
+        <span class="cov8" title="1">cprCandles := NewCandleAdapter(candles)
         return cprCandles, err</span>
 }
 
-func (obj *ATMcs) GetCurrentDayCandleData5minFyers(currentTime time.Time) (cpr.CPRCandles, error) <span class="cov0" title="0">{
+func (obj *ATMcs) GetCurrentDayCandleData5minFyers(currentTime time.Time) (cpr.CPRCandles, error) <span class="cov8" title="1">{
         from := time.Date(currentTime.Year(), currentTime.Month(), currentTime.Day(), 9, 15, 0, 0, obj.ISTLocation)
         to := currentTime
-        candles, err := obj.Broker.GetCandles(obj.Symbol, from, to)
+        candles, err := obj.Broker.GetCandles(obj.Symbol, from, to, executor.Minute5)
         if err != nil </span><span class="cov0" title="0">{
                 return nil, err
         }</span>
-        <span class="cov0" title="0">cprCandles := NewCandleAdapter(candles)
+        <span class="cov8" title="1">cprCandles := NewCandleAdapter(candles)
         return cprCandles, nil</span>
 }
 
@@ -568,16 +626,16 @@ type Holidays struct {
         HolidayDates []string `json:"holiday_dates"`
 }
 
-func isDateHoliday(date string, holidays *Holidays) bool <span class="cov0" title="0">{
-        for _, holiday := range holidays.HolidayDates </span><span class="cov0" title="0">{
+func isDateHoliday(date string, holidays *Holidays) bool <span class="cov8" title="1">{
+        for _, holiday := range holidays.HolidayDates </span><span class="cov8" title="1">{
                 if holiday == date </span><span class="cov0" title="0">{
                         return true
                 }</span>
         }
-        <span class="cov0" title="0">return false</span>
+        <span class="cov8" title="1">return false</span>
 }
 
-func WasMarketOpen(date time.Time, holidays *Holidays) bool <span class="cov0" title="0">{
+func WasMarketOpen(date time.Time, holidays *Holidays) bool <span class="cov8" title="1">{
         loc, err := time.LoadLocation("Asia/Kolkata")
         if err != nil </span><span class="cov0" title="0">{
                 log.Println("Error loading location:", err)
@@ -585,27 +643,34 @@ func WasMarketOpen(date time.Time, holidays *Holidays) bool <span class="cov0" t
         }</span>
 
         // Check if the date is a weekend (Saturday or Sunday)
-        <span class="cov0" title="0">if date.Weekday() == time.Saturday || date.Weekday() == time.Sunday </span><span class="cov0" title="0">{
+        <span class="cov8" title="1">if date.Weekday() == time.Saturday || date.Weekday() == time.Sunday </span><span class="cov0" title="0">{
                 return false
         }</span>
 
-        <span class="cov0" title="0">dateString := date.In(loc).Format("2006-01-02")
+        <span class="cov8" title="1">dateString := date.In(loc).Format("2006-01-02")
 
         // Check if the date is a holiday
         if isDateHoliday(dateString, holidays) </span><span class="cov0" title="0">{
                 return false
         }</span>
 
-        <span class="cov0" title="0">return true</span>
+        <span class="cov8" title="1">return true</span>
 }
 
-func (obj *ATMcs) GetPreviousNonWeekendNonHolidayDate(currentDate time.Time) time.Time <span class="cov0" title="0">{
+func (obj *ATMcs) GetPreviousNonWeekendNonHolidayDate(currentDate time.Time) time.Time <span class="cov8" title="1">{
         previousDate := currentDate.AddDate(0, 0, -1)
         for !WasMarketOpen(previousDate, &amp;obj.Holidays) </span><span class="cov0" title="0">{
                 previousDate = previousDate.AddDate(0, 0, -1)
         }</span>
-        <span class="cov0" title="0">return previousDate</span>
+        <span class="cov8" title="1">return previousDate</span>
 }
+</pre>
+		
+		<pre class="file" id="file4" style="display: none">package atmcs
+
+func (obj *ATMcs) GetEntryMessage() string <span class="cov0" title="0">{
+        return ""
+}</span>
 </pre>
 		
 		</div>

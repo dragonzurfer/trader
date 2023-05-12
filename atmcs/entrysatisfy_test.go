@@ -72,15 +72,28 @@ func (b *RealBroker) GetMarketDepth(string) (executor.BidAskLike, error) {
 	return b.BidAsks[time.Now()], nil
 }
 
-func (b *RealBroker) GetCandles(symbol string, startTime time.Time, endTime time.Time) ([]executor.CandleLike, error) {
+func (b *RealBroker) GetCandles(symbol string, startTime time.Time, endTime time.Time, tf executor.TimeFrame) ([]executor.CandleLike, error) {
 	cli := fyers.New(b.ApiKey, b.AccessToken)
-	data, err := cli.GetHistoricalData(symbol, api.Minute5, startTime, endTime)
+	var resolution api.Resolution
+	switch tf {
+	case executor.Minute5:
+		resolution = api.Minute5
+	case executor.Day:
+		resolution = api.Day
+	}
+	data, err := cli.GetHistoricalData(symbol, resolution, startTime, endTime)
 	if err != nil {
 		return nil, errors.New("failed to get candles from fyers:" + err.Error())
 	}
+	// if resolution == api.Minute5 {
+	// 	for _, candle := range data.Candles {
+	// 		fmt.Println(candle.HighestValue, candle.LowestValue, candle.Timestamp)
+	// 	}
+	// }
+	// fmt.Println(startTime, ":", endTime)
 	candles := NewBrokerCandleLikeAdapter(data.Candles)
-	for _, candle := range candles {
-		fmt.Println(candle.GetHigh(), candle.GetLow(), candle.GetClose())
+	if len(candles) < 1 {
+		return nil, errors.New("Emtpy candles BrokerLike.GetCandles")
 	}
 	return candles, nil
 }
@@ -130,18 +143,17 @@ func TestIsEntrySatisfied(t *testing.T) {
 	LoadTimeLocation()
 	log.SetFlags(log.Lshortfile)
 	historicalTime := []string{
-		"2023-05-02T10:15:00+05:30",
-		"2023-05-11T13:34:59+05:30",
-		"2023-05-12T09:45:00+05:30",
+		"2023-05-12T12:04:59+05:30",
 	}
 	settings := []string{
+		"testcase1settings.json",
 		"testcase1settings.json",
 		"testcase1settings.json",
 		"testcase1settings.json",
 	}
 
 	for i, timeString := range historicalTime {
-		fmt.Println("Running for time: ", timeString)
+		fmt.Println("\nRunning for time: ", timeString)
 		timeObj, err := time.Parse("2006-01-02T15:04:05-07:00", timeString)
 		if err != nil {
 			t.Fatal("Error parsing time:", err)
@@ -155,16 +167,70 @@ func TestIsEntrySatisfied(t *testing.T) {
 		}
 		settingsFilePath := filepath.Join(currentFilePath, "testcases", "entrysatisfy", settingsFileName)
 		var actualObj executor.ExecutorLike
-		actualObj = atmcs.New(settingsFilePath, currentFilePath, func() time.Time { return timeObj })
+		var actualObjATMcs *atmcs.ATMcs
+		actualObjATMcs = atmcs.New(settingsFilePath, currentFilePath, func() time.Time { return timeObj })
+		actualObj = actualObjATMcs
 		if actualObj == nil {
 			t.Fatalf("ATMcs object init fail")
 		}
 		broker := NewRealBroker(t)
 		actualObj.SetBroker(&broker)
-		fmt.Println(actualObj.GetTradeType())
-		if actualObj.IsEntrySatisfied() != false {
-			t.Fatalf("entry is satisfied:%+v", actualObj.GetTradeType())
+		if actualObj.IsEntrySatisfied() == false {
+			t.Errorf("atmcs object:%+v", actualObj.GetTradeType())
+			t.Errorf("cpr signal %+v", actualObjATMcs.SignalCPR)
+			t.Fatal("failed")
+		}
+		if actualObjATMcs.EntrySatisfied == false {
+			t.Fatal("EntrSatisfied variable not set")
 		}
 	}
-	
+
+}
+
+func TestIsEntryNotSatisfied(t *testing.T) {
+	LoadTimeLocation()
+	log.SetFlags(log.Lshortfile)
+	historicalTime := []string{
+		"2023-05-11T13:34:59+05:30",
+	}
+	settings := []string{
+		"testcase1settings.json",
+		"testcase1settings.json",
+		"testcase1settings.json",
+		"testcase1settings.json",
+	}
+
+	for i, timeString := range historicalTime {
+		fmt.Println("\nRunning for time: ", timeString)
+		timeObj, err := time.Parse("2006-01-02T15:04:05-07:00", timeString)
+		if err != nil {
+			t.Fatal("Error parsing time:", err)
+			return
+		}
+
+		settingsFileName := settings[i]
+		currentFilePath, err := os.Getwd()
+		if err != nil {
+			t.Fatalf("Error getting current file path: %v", err)
+		}
+		settingsFilePath := filepath.Join(currentFilePath, "testcases", "entrysatisfy", settingsFileName)
+		var actualObj executor.ExecutorLike
+		var actualObjATMcs *atmcs.ATMcs
+		actualObjATMcs = atmcs.New(settingsFilePath, currentFilePath, func() time.Time { return timeObj })
+		actualObj = actualObjATMcs
+		if actualObj == nil {
+			t.Fatalf("ATMcs object init fail")
+		}
+		broker := NewRealBroker(t)
+		actualObj.SetBroker(&broker)
+		if actualObj.IsEntrySatisfied() == true {
+			t.Errorf("atmcs object:%+v", actualObj.GetTradeType())
+			t.Errorf("cpr signal %+v", actualObjATMcs.SignalCPR)
+			t.Fatal("failed")
+		}
+		if actualObjATMcs.EntrySatisfied == true {
+			t.Fatal("EntrySatisfied variable true when is satisfied is false")
+		}
+	}
+
 }

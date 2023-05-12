@@ -122,7 +122,7 @@ func (b *TestBroker) GetMarketDepth(string) (executor.BidAskLike, error) {
 	return b.BidAsks[time.Now()], nil
 }
 
-func (b *TestBroker) GetCandles(string, time.Time, time.Time) ([]executor.CandleLike, error) {
+func (b *TestBroker) GetCandles(string, time.Time, time.Time, executor.TimeFrame) ([]executor.CandleLike, error) {
 	return nil, nil
 }
 
@@ -194,6 +194,9 @@ func TestPaperTrade(t *testing.T) {
 		//create obj
 		LoadTimeLocation()
 		actualObj := atmcs.New(settingsFilePath, currentFilePath, func() time.Time { return testCase.CurrentTime })
+		if actualObj == nil {
+			t.Fatal("Failed to create atmcs object")
+		}
 		var broker TestBroker
 		broker.Expiries = testCase.OptionExpiries
 		broker.BidAsks = testCase.OptionDepths

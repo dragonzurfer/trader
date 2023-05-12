@@ -2,7 +2,6 @@ package atmcs
 
 import (
 	"errors"
-	"fmt"
 	"log"
 	"time"
 
@@ -13,7 +12,7 @@ import (
 func (obj *ATMcs) IsEntrySatisfied() bool {
 	minTargetPercent := obj.Settings.MinTargetPercent
 	minSLPercent := obj.Settings.MinStopLossPercent
-	previousDayCandle, currentDayCandles, err := obj.GetCandles()
+	currentDayCandles, previousDayCandle, err := obj.GetCandles()
 	if err != nil {
 		log.Println("error in IsEntrySatisfied():", err.Error())
 		return false
@@ -22,7 +21,6 @@ func (obj *ATMcs) IsEntrySatisfied() bool {
 	obj.SignalCPR = cpr.GetCPRSignal(minSLPercent, minTargetPercent, previousDayCandle, currentDayCandles)
 	obj.EntrySatisfied = false
 	obj.Trade.TradeType = executor.Nuetral
-	fmt.Println(obj.SignalCPR)
 	switch obj.SignalCPR.Signal {
 	case cpr.Buy:
 		obj.EntrySatisfied = true
@@ -57,7 +55,7 @@ func (obj *ATMcs) GetCandles() (cpr.CPRCandles, cpr.CPRCandles, error) {
 func (obj *ATMcs) GetPreviousDayCandleDataFyers(previousDate time.Time) (cpr.CPRCandles, error) {
 	from := time.Date(previousDate.Year(), previousDate.Month(), previousDate.Day(), 9, 15, 0, 0, obj.ISTLocation)
 	to := time.Date(previousDate.Year(), previousDate.Month(), previousDate.Day(), 15, 30, 0, 0, obj.ISTLocation)
-	candles, err := obj.Broker.GetCandles(obj.Symbol, from, to)
+	candles, err := obj.Broker.GetCandles(obj.Symbol, from, to, executor.Day)
 	if err != nil {
 		return nil, err
 	}
@@ -68,7 +66,7 @@ func (obj *ATMcs) GetPreviousDayCandleDataFyers(previousDate time.Time) (cpr.CPR
 func (obj *ATMcs) GetCurrentDayCandleData5minFyers(currentTime time.Time) (cpr.CPRCandles, error) {
 	from := time.Date(currentTime.Year(), currentTime.Month(), currentTime.Day(), 9, 15, 0, 0, obj.ISTLocation)
 	to := currentTime
-	candles, err := obj.Broker.GetCandles(obj.Symbol, from, to)
+	candles, err := obj.Broker.GetCandles(obj.Symbol, from, to, executor.Minute5)
 	if err != nil {
 		return nil, err
 	}
