@@ -18,12 +18,13 @@ type ExecutorLike interface {
 	PaperTrade(TradeType)
 	AccountTrade(TradeType)
 	GetTradeType() TradeType
+	ExitPaper()
+	ExitAccount()
 }
 
 type Trader struct {
 	ID                        string
 	HolidaysFilePath          string
-	InTradeFilePath           string
 	PaperTradeFilePath        string
 	AccountTradeFilePath      string
 	ExecutorErrorFilePath     string
