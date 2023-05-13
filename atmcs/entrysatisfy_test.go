@@ -86,13 +86,22 @@ func (b *RealBroker) GetCandles(symbol string, startTime time.Time, endTime time
 	if err != nil {
 		return nil, errors.New("failed to get candles from fyers:" + err.Error())
 	}
-	// if resolution == api.Minute5 {
-	// 	for _, candle := range data.Candles {
-	// 		fmt.Println(candle.HighestValue, candle.LowestValue, candle.Timestamp)
-	// 	}
-	// }
+
+	index := 0
+	if resolution == api.Minute5 {
+		endTime = endTime.Add(time.Second)
+		for i, c := range data.Candles {
+			fmt.Println(c.Timestamp, endTime)
+			if c.Timestamp.After(endTime) {
+				break
+			}
+			index = i
+		}
+	} else {
+		index = len(data.Candles)
+	}
 	// fmt.Println(startTime, ":", endTime)
-	candles := NewBrokerCandleLikeAdapter(data.Candles)
+	candles := NewBrokerCandleLikeAdapter(data.Candles[0:index])
 	if len(candles) < 1 {
 		return nil, errors.New("Emtpy candles BrokerLike.GetCandles")
 	}
@@ -144,7 +153,7 @@ func TestIsEntrySatisfied(t *testing.T) {
 	LoadTimeLocation()
 	log.SetFlags(log.Lshortfile)
 	historicalTime := []string{
-		"2023-05-12T12:04:59+05:30",
+		"2023-05-10T10:19:59+05:30",
 	}
 	settings := []string{
 		"testcase1settings.json",

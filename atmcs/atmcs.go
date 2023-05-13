@@ -79,9 +79,6 @@ func (obj *ATMcs) InTrade() bool {
 	return obj.Trade.InTrade
 }
 
-func (obj *ATMcs) GetExitMessage() string {
-	return ""
-}
 func (obj *ATMcs) IsError() bool {
 	return false
 }

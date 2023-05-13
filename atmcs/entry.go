@@ -159,7 +159,8 @@ func GetAsks(broker executor.BrokerLike, pos OptionPosition) ([]executor.MarketD
 }
 
 func GetExpiry(currentTime time.Time, minDaysToExpiry int64, strike float64, expiries []executor.Expiry) (executor.Expiry, error) {
-	err := fmt.Errorf("Could not find an expiry that has %v days to expiry", minDaysToExpiry)
+	var err error
+	err = fmt.Errorf("could not find an expiry that has %v days to expiry", minDaysToExpiry)
 	minDiff := int64(math.MaxInt64)
 	var earliestExpiry executor.Expiry
 	for _, expiry := range expiries {
@@ -169,6 +170,9 @@ func GetExpiry(currentTime time.Time, minDaysToExpiry int64, strike float64, exp
 			earliestExpiry = expiry
 			err = nil
 		}
+	}
+	if err != nil {
+		err = fmt.Errorf("could not find an expiry that has %v days to expiry: found expiry(%v) with %v days to expiry", minDaysToExpiry, earliestExpiry, minDiff)
 	}
 
 	return earliestExpiry, err
