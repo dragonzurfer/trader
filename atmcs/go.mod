@@ -4,7 +4,7 @@ go 1.18
 
 require (
 	github.com/dragonzurfer/strategy/CPR v0.0.0-20230512130832-1818fc128978
-	github.com/dragonzurfer/trader/executor v0.0.0-20230512094538-4a7628856b86
+	github.com/dragonzurfer/trader/executor v0.0.0-20230513084155-97aa35234a76
 )
 
 require (
