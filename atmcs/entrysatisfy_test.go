@@ -154,6 +154,8 @@ func TestIsEntrySatisfied(t *testing.T) {
 	log.SetFlags(log.Lshortfile)
 	historicalTime := []string{
 		"2023-05-10T10:19:59+05:30",
+		// "2023-05-15T10:54:59+05:30", // Test after 15th
+		// "2023-05-15T11:09:59+05:30", // Test after 15th
 	}
 	settings := []string{
 		"testcase1settings.json",
