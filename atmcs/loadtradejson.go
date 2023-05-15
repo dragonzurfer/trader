@@ -4,11 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"os"
 	"path/filepath"
-
-	"github.com/dragonzurfer/trader/atmcs/trade"
 )
 
 func (obj *ATMcs) LoadTradeFromJSON() error {
@@ -36,7 +33,7 @@ func (obj *ATMcs) LoadTradeFromJSON() error {
 	return nil
 }
 
-func (obj *ATMcs) LoadATMcsTradeToJSON() error {
+func (obj *ATMcs) WriteATMcsTradeToJSON() error {
 	// Convert the Trade object to a JSON string
 	tradeJSON, err := json.MarshalIndent(obj.Trade, "", "  ")
 	if err != nil {
@@ -56,27 +53,5 @@ func (obj *ATMcs) LoadATMcsTradeToJSON() error {
 }
 
 func (obj *ATMcs) InTrade() bool {
-	// Define the full path to the JSON file
-	fullPath := filepath.Join(obj.TradeFilePath, "trade.json")
-
-	// Load the JSON file
-	data, err := ioutil.ReadFile(fullPath)
-	if err != nil {
-		log.Printf("Failed to read file %s: %v\n", fullPath, err)
-		return obj.Trade.InTrade
-	}
-
-	// Unmarshal the JSON into the Trade structure
-	var trade trade.Trade
-	err = json.Unmarshal(data, &trade)
-	if err != nil {
-		log.Printf("Failed to unmarshal JSON: %v\n", err)
-		return obj.Trade.InTrade
-	}
-
-	// Set obj.Trade to the loaded trade data
-	obj.Trade = trade
-
-	// Return whether or not a trade is active
 	return obj.Trade.InTrade
 }
