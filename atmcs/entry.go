@@ -9,33 +9,9 @@ import (
 	"strings"
 	"time"
 
+	"github.com/dragonzurfer/trader/atmcs/trade"
 	"github.com/dragonzurfer/trader/executor"
 )
-
-type Option struct {
-	Expiry           time.Time           `json:"expiry"`
-	Strike           float64             `json:"strike"`
-	Type             executor.OptionType `json:"type"`
-	Symbol           string              `json:"symbol"`
-	UnderlyingSymbol string              `json:"underlying_symbol"`
-}
-
-type OptionPosition struct {
-	Option
-	Price     float64
-	TradeType executor.TradeType
-	Quantity  int64
-}
-
-func (op OptionPosition) GetTradeType() executor.TradeType { return op.TradeType }
-func (op OptionPosition) GetPrice() float64                { return op.Price }
-func (op OptionPosition) GetQuantity() int64               { return op.Quantity }
-
-func (o Option) GetExpiry() time.Time               { return o.Expiry }
-func (o Option) GetStrike() float64                 { return o.Strike }
-func (o Option) GetOptionType() executor.OptionType { return o.Type }
-func (o Option) GetOptionSymbol() string            { return o.Symbol }
-func (o Option) GetUnderlyingSymbol() string        { return o.UnderlyingSymbol }
 
 func (obj *ATMcs) PaperTrade(tradeType executor.TradeType) {
 	obj.Trade.InTrade = true
@@ -43,7 +19,7 @@ func (obj *ATMcs) PaperTrade(tradeType executor.TradeType) {
 	obj.Trade.TimeOfEntry = obj.GetCurrentTime()
 }
 
-func (obj *ATMcs) makeEntryPositions(tradeType executor.TradeType) []executor.OptionPositionLike {
+func (obj *ATMcs) makeEntryPositions(tradeType executor.TradeType) []trade.OptionPosition {
 
 	ltp, err := obj.Broker.GetLTP(obj.Symbol)
 	if err != nil {
@@ -74,8 +50,8 @@ func (obj *ATMcs) makeEntryPositions(tradeType executor.TradeType) []executor.Op
 	symbol := obj.Symbol
 
 	quantity := obj.Quantity
-	var sellPosition, buyPosition OptionPosition
-	var entryPositions []executor.OptionPositionLike
+	var sellPosition, buyPosition trade.OptionPosition
+	var entryPositions []trade.OptionPosition
 	if tradeType == executor.Buy {
 		sellPosition = obj.MakeEntryPosition(symbol, strike, sellExpiry, executor.PutOption, executor.Sell, quantity)
 		buyPosition = obj.MakeEntryPosition(symbol, strike, buyExpiry, executor.PutOption, executor.Buy, quantity/2)
@@ -99,15 +75,15 @@ func (obj *ATMcs) makeEntryPositions(tradeType executor.TradeType) []executor.Op
 	return entryPositions
 }
 
-func (obj *ATMcs) MakeEntryPosition(symbol string, strike float64, expiry executor.Expiry, optionType executor.OptionType, tradeType executor.TradeType, quantity int64) OptionPosition {
-	option := Option{
+func (obj *ATMcs) MakeEntryPosition(symbol string, strike float64, expiry executor.Expiry, optionType executor.OptionType, tradeType executor.TradeType, quantity int64) trade.OptionPosition {
+	option := trade.Option{
 		Strike:           strike,
 		Expiry:           expiry.ExpiryDate,
 		Type:             optionType,
 		Symbol:           obj.Symbol, //change to broker symbol
 		UnderlyingSymbol: symbol,
 	}
-	optionPosition := OptionPosition{
+	optionPosition := trade.OptionPosition{
 		Option:    option,
 		TradeType: tradeType,
 		Quantity:  quantity,
@@ -142,7 +118,7 @@ func (obj *ATMcs) GetAvgMarketDepth(depth []executor.MarketDepthLike) float64 {
 	return roundedPrice
 }
 
-func GetBids(broker executor.BrokerLike, pos OptionPosition) ([]executor.MarketDepthLike, error) {
+func GetBids(broker executor.BrokerLike, pos trade.OptionPosition) ([]executor.MarketDepthLike, error) {
 	bid_aks, err := broker.GetMarketDepthOption(pos.Strike, pos.Expiry, pos.Type)
 	if err != nil {
 		return nil, err
@@ -150,7 +126,7 @@ func GetBids(broker executor.BrokerLike, pos OptionPosition) ([]executor.MarketD
 	return bid_aks.GetBids(), err
 }
 
-func GetAsks(broker executor.BrokerLike, pos OptionPosition) ([]executor.MarketDepthLike, error) {
+func GetAsks(broker executor.BrokerLike, pos trade.OptionPosition) ([]executor.MarketDepthLike, error) {
 	bid_aks, err := broker.GetMarketDepthOption(pos.Strike, pos.Expiry, pos.Type)
 	if err != nil {
 		return nil, err

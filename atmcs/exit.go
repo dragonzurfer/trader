@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 
+	"github.com/dragonzurfer/trader/atmcs/trade"
 	"github.com/dragonzurfer/trader/executor"
 )
 
@@ -23,20 +24,16 @@ func (obj *ATMcs) ExitPaper() {
 
 	// Clear the current trade
 	obj.Trade.InTrade = false
-	exitPositionsLike := make([]executor.OptionPositionLike, len(exitPositions))
-	for i, position := range exitPositions {
-		exitPositionsLike[i] = position
-	}
-	obj.Trade.ExitPositions = exitPositionsLike
+	obj.Trade.ExitPositions = exitPositions
 	obj.Trade.TimeOfExit = obj.GetCurrentTime()
 }
 
-func (obj *ATMcs) MakeExitPositions() ([]OptionPosition, error) {
-	var exitPositions []OptionPosition
+func (obj *ATMcs) MakeExitPositions() ([]trade.OptionPosition, error) {
+	var exitPositions []trade.OptionPosition
 
 	// Loop through the current entry positions and create corresponding exit positions
 	for _, entryPosition := range obj.Trade.EntryPositions {
-		position := entryPosition.(OptionPosition)
+		position := entryPosition
 		exitPosition, err := obj.MakePositionExit(position)
 		if err != nil {
 			return nil, errors.New("failed to makeExitPositions():" + err.Error())
@@ -47,11 +44,11 @@ func (obj *ATMcs) MakeExitPositions() ([]OptionPosition, error) {
 	return exitPositions, nil
 }
 
-func (obj *ATMcs) MakePositionExit(entryPosition OptionPosition) (OptionPosition, error) {
+func (obj *ATMcs) MakePositionExit(entryPosition trade.OptionPosition) (trade.OptionPosition, error) {
 	// Fetch the current market price for the option
 	var depth []executor.MarketDepthLike
 	var err error
-	var exitPosition OptionPosition
+	var exitPosition trade.OptionPosition
 	if entryPosition.GetTradeType() == executor.Buy {
 		depth, err = GetBids(obj.Broker, entryPosition)
 	} else {
@@ -69,8 +66,8 @@ func (obj *ATMcs) MakePositionExit(entryPosition OptionPosition) (OptionPosition
 	}
 
 	// Create a new option position with the current price and trade type reversed
-	exitPosition = OptionPosition{
-		Option: Option{
+	exitPosition = trade.OptionPosition{
+		Option: trade.Option{
 			Strike:           entryPosition.GetStrike(),
 			Expiry:           entryPosition.GetExpiry(),
 			Type:             entryPosition.GetOptionType(),
