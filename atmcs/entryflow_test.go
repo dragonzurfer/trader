@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
+	"math"
 	"os"
 	"path/filepath"
 	"testing"
@@ -172,6 +173,43 @@ func NewScenarioBroker(t *testing.T) TestScenarioBroker {
 	return broker
 }
 
+func (e *SceneATMcs) StatesEqual(a *atmcs.ATMcs) bool {
+	// fmt.Printf("expect:%v actual:%v\n", 1, 2)
+	if math.Abs(e.SignalCPR.EntryPrice-a.SignalCPR.EntryPrice) >= 1 {
+		fmt.Printf("EntryPrice Expect:%v Actual:%v\n", e.SignalCPR.EntryPrice, a.SignalCPR.EntryPrice)
+		return false
+	}
+	if math.Abs(e.SignalCPR.StopLossPrice-a.SignalCPR.StopLossPrice) >= 1 {
+		fmt.Printf("StopLossPrice Expect:%v Actual:%v\n", e.SignalCPR.StopLossPrice, a.SignalCPR.StopLossPrice)
+		return false
+	}
+	if math.Abs(e.SignalCPR.TargetPrice-a.SignalCPR.TargetPrice) >= 1 {
+		fmt.Printf("TargetPrice Expect:%v Actual:%v\n", e.SignalCPR.TargetPrice, a.SignalCPR.TargetPrice)
+		return false
+	}
+	if e.EntrySatisfied != a.EntrySatisfied {
+		fmt.Printf("EntrySatisfied Expect:%v Actual:%v\n", e.EntrySatisfied, a.EntrySatisfied)
+		return false
+	}
+	if e.ExitSatisfied != a.ExitSatisfied {
+		fmt.Printf("ExitSatisfied Expect:%v Actual:%v\n", e.ExitSatisfied, a.ExitSatisfied)
+		return false
+	}
+	// Trade
+	return true
+}
+
+func (b *TestScenario) CheckState(a *atmcs.ATMcs, t *testing.T) {
+	now := timeObj
+	for _, timestate := range b.TimeStates {
+		if timestate.Time.Equal(now) {
+			if !timestate.ATMcsState.StatesEqual(a) {
+				t.Fatalf("States Not matching")
+			}
+		}
+	}
+}
+
 func TestFlow(t *testing.T) {
 	LoadTimeLocation()
 	log.SetFlags(log.Lshortfile)
@@ -232,16 +270,21 @@ func TestFlow(t *testing.T) {
 		broker.BidAsks = testCase.OptionDepths
 		actualObj.SetBroker(&broker)
 		for {
-			if actualObjATMcs.InTradingWindow() {
-				ltp, err := broker.GetLTP("NSE:NIFTY50-INDEX")
-				if err != nil {
-					t.Fatalf(err.Error())
+			if actualObj.InTradingWindow() {
+				inTrade := actualObj.InTrade()
+				if !inTrade && actualObj.IsEntrySatisfied() {
+					fmt.Printf("%+v\n", actualObjATMcs)
+					// t.SkipNow()
+					// actualObj.PaperTrade(actualObj.GetTradeType())
 				}
-				fmt.Println(ltp)
+				if inTrade {
+					t.SkipNow()
+				}
 			} else {
 				break
 			}
 			time.Sleep(time.Millisecond * 200)
+			testCase.CheckState(actualObjATMcs, t)
 		}
 	}
 
