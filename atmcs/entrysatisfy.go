@@ -2,6 +2,7 @@ package atmcs
 
 import (
 	"errors"
+	"fmt"
 	"log"
 	"math"
 	"time"
@@ -11,17 +12,24 @@ import (
 )
 
 func (obj *ATMcs) IsEntrySatisfied() bool {
+
+	if err := obj.SetSignal(); err != nil {
+		log.Println("IsEntrySatisfied() failed:", err.Error())
+		return false
+	}
+	obj.SetEntryStates()
+	return obj.EntrySatisfied
+}
+
+func (obj *ATMcs) SetSignal() error {
 	minTargetPercent := obj.Settings.MinTargetPercent
 	minSLPercent := obj.Settings.MinStopLossPercent
 	currentDayCandles, previousDayCandle, err := obj.GetCandles()
 	if err != nil {
-		log.Println("error in IsEntrySatisfied():", err.Error())
-		return false
+		return fmt.Errorf("error in SetSignal():%w", err)
 	}
-
 	obj.SignalCPR = cpr.GetCPRSignal(minSLPercent, minTargetPercent, previousDayCandle, currentDayCandles)
-	obj.SetEntryStates()
-	return obj.EntrySatisfied
+	return nil
 }
 
 func (obj *ATMcs) SetEntryStates() {
@@ -36,6 +44,7 @@ func (obj *ATMcs) SetEntryStates() {
 	obj.ExitSatisfied = false
 	obj.Trade.TargetPrice = obj.SignalCPR.TargetPrice
 	obj.Trade.StopLossPrice = obj.SignalCPR.StopLossPrice
+	obj.Trade.EntryPrice = obj.SignalCPR.EntryPrice
 	switch obj.SignalCPR.Signal {
 	case cpr.Buy:
 		obj.Trade.TradeType = executor.Buy
