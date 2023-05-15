@@ -180,7 +180,7 @@ func TestIsEntrySatisfied(t *testing.T) {
 		settingsFilePath := filepath.Join(currentFilePath, "testcases", "entrysatisfy", settingsFileName)
 		var actualObj executor.ExecutorLike
 		var actualObjATMcs *atmcs.ATMcs
-		actualObjATMcs = atmcs.New(settingsFilePath, currentFilePath, func() time.Time { return timeObj })
+		actualObjATMcs = atmcs.New(settingsFilePath, func() time.Time { return timeObj })
 		actualObj = actualObjATMcs
 		if actualObj == nil {
 			t.Fatalf("ATMcs object init fail")
@@ -235,7 +235,7 @@ func TestIsEntryNotSatisfied(t *testing.T) {
 		settingsFilePath := filepath.Join(currentFilePath, "testcases", "entrysatisfy", settingsFileName)
 		var actualObj executor.ExecutorLike
 		var actualObjATMcs *atmcs.ATMcs
-		actualObjATMcs = atmcs.New(settingsFilePath, currentFilePath, func() time.Time { return timeObj })
+		actualObjATMcs = atmcs.New(settingsFilePath, func() time.Time { return timeObj })
 		actualObj = actualObjATMcs
 		if actualObj == nil {
 			t.Fatalf("ATMcs object init fail")

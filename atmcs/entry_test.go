@@ -23,12 +23,21 @@ func LoadTimeLocation() {
 	ISTLocation, _ = time.LoadLocation("Asia/Kolkata")
 }
 
+type Holidays struct {
+	HolidayDates []string `json:"holiday_dates"`
+}
+
 type Settings struct {
-	TradeFilePath   string  `json:"tradeFilePath"`
-	Quantity        int64   `json:"quantity"`
-	StrikeDiff      float64 `json:"strikeDiff"`
-	MinDaysToExpiry int64   `json:"minDaysToExpiry"`
-	Symbol          string  `json:"symbol"`
+	HolidayDatesFilePath string  `json:"holidays_file_path"`
+	MinTrailPercent      float64 `json:"min_trail_percent"`
+	MinTargetPercent     float64 `json:"min_target_percent"`
+	MinStopLossPercent   float64 `json:"min_sl_percent"`
+	TradeFilePath        string  `json:"tradeFilePath"`
+	Quantity             int64   `json:"quantity"`
+	StrikeDiff           float64 `json:"strikeDiff"`
+	MinDaysToExpiry      int64   `json:"minDaysToExpiry"`
+	Symbol               string  `json:"symbol"`
+	TickSize             float64 `json:"tick_size"`
 }
 
 type MarketDepth struct {
@@ -193,7 +202,7 @@ func TestPaperTrade(t *testing.T) {
 		settingsFilePath := filepath.Join(currentFilePath, "testcases", "entry", settingsFileName)
 		//create obj
 		LoadTimeLocation()
-		actualObj := atmcs.New(settingsFilePath, currentFilePath, func() time.Time { return testCase.CurrentTime })
+		actualObj := atmcs.New(settingsFilePath, func() time.Time { return testCase.CurrentTime })
 		if actualObj == nil {
 			t.Fatal("Failed to create atmcs object")
 		}

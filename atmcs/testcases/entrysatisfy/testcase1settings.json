@@ -1,5 +1,5 @@
 {
-  "tradeFilePath": "C:\\Users\\drago\\go\\src\\trader\\atmcs\\storetrades\\trade.json",
+  "tradeFilePath": "C:\\Users\\user\\go\\src\\trader\\atmcs\\storetrades\\trade.json",
   "quantity": 3600,
   "strikeDiff": 50,
   "minDaysToExpiry": 7,
@@ -7,6 +7,6 @@
   "min_target_percent": 0.15,
   "min_sl_percent": 0.05,
   "min_trail_percent": 0.1,
-  "holidays_file_path": "C:\\Users\\drago\\go\\src\\trader\\atmcs\\holidays.json",
+  "holidays_file_path": "C:\\Users\\user\\go\\src\\trader\\atmcs\\holidays.json",
   "tick_size": 0.05
 }

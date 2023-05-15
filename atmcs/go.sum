@@ -11,8 +11,8 @@ github.com/dragonzurfer/revclose v1.0.2 h1:HScegnbOLDYxgVzZiwqKy4XagtaLcMoiV+YMG
 github.com/dragonzurfer/revclose v1.0.2/go.mod h1:+kJ8T3ETgUT03vWLUu46y+HxCkEfS4/9geZ1NU6y1lI=
 github.com/dragonzurfer/strategy/CPR v0.0.0-20230512130832-1818fc128978 h1:RCJ/09chyi6cDJKtV7HNsT/iWtU2nUPEqqqAUGx8gc0=
 github.com/dragonzurfer/strategy/CPR v0.0.0-20230512130832-1818fc128978/go.mod h1:+RSVL14MeqDcf6qzIOOwOODcw5koJcZq+P6s8nKNiCM=
-github.com/dragonzurfer/trader/executor v0.0.0-20230513084155-97aa35234a76 h1:hpJxOmlCgti7DCKM7C/Qe/UJKrFtfZ9pNrQannG6JxA=
-github.com/dragonzurfer/trader/executor v0.0.0-20230513084155-97aa35234a76/go.mod h1:THW/vRrxAlc47KGWgCpHIVaPoFox6FvXWypbmHNsWOw=
+github.com/dragonzurfer/trader/executor v0.0.0-20230515093355-e1dbdbcef4c9 h1:C0SsfqvttRaPLkSiSVbWYGDXPLk3ZoQu5ZRWxTsPScw=
+github.com/dragonzurfer/trader/executor v0.0.0-20230515093355-e1dbdbcef4c9/go.mod h1:THW/vRrxAlc47KGWgCpHIVaPoFox6FvXWypbmHNsWOw=
 github.com/pmezard/go-difflib v1.0.0 h1:4DBwDE0NGyQoBHbLQYPwSUPoCMWR5BEzIk/f1lZbAQM=
 github.com/pmezard/go-difflib v1.0.0/go.mod h1:iKH77koFhYxTK1pcRnkKkqfTogsbg7gZNVY4sRDYZ/4=
 github.com/sirupsen/logrus v1.9.0 h1:trlNQbNUG3OdDrDil03MCb1H2o9nJ1x4/5LYw7byDE0=
