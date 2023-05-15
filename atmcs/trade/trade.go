@@ -15,7 +15,10 @@ type Trade struct {
 	TrailStopLossPrice float64
 	StopLossPrice      float64
 	TargetPrice        float64
+	EntryPrice         float64
 	TradeType          executor.TradeType
+	IsMinTrailHit      bool
+	IsStopLossHit      bool
 }
 
 func (t *Trade) GetEntryPositions() []executor.OptionPositionLike {
