@@ -6,10 +6,35 @@ import (
 	"github.com/dragonzurfer/trader/executor"
 )
 
+type Option struct {
+	Expiry           time.Time           `json:"expiry"`
+	Strike           float64             `json:"strike"`
+	Type             executor.OptionType `json:"type"`
+	Symbol           string              `json:"symbol"`
+	UnderlyingSymbol string              `json:"underlying_symbol"`
+}
+
+type OptionPosition struct {
+	Option
+	Price     float64
+	TradeType executor.TradeType
+	Quantity  int64
+}
+
+func (op OptionPosition) GetTradeType() executor.TradeType { return op.TradeType }
+func (op OptionPosition) GetPrice() float64                { return op.Price }
+func (op OptionPosition) GetQuantity() int64               { return op.Quantity }
+
+func (o Option) GetExpiry() time.Time               { return o.Expiry }
+func (o Option) GetStrike() float64                 { return o.Strike }
+func (o Option) GetOptionType() executor.OptionType { return o.Type }
+func (o Option) GetOptionSymbol() string            { return o.Symbol }
+func (o Option) GetUnderlyingSymbol() string        { return o.UnderlyingSymbol }
+
 type Trade struct {
 	InTrade            bool
-	EntryPositions     []executor.OptionPositionLike
-	ExitPositions      []executor.OptionPositionLike
+	EntryPositions     []OptionPosition
+	ExitPositions      []OptionPosition
 	TimeOfEntry        time.Time
 	TimeOfExit         time.Time
 	TrailStopLossPrice float64
@@ -21,19 +46,19 @@ type Trade struct {
 	IsStopLossHit      bool
 }
 
-func (t *Trade) GetEntryPositions() []executor.OptionPositionLike {
+func (t *Trade) GetEntryPositions() []OptionPosition {
 	return t.EntryPositions
 }
 
-func (t *Trade) SetEntryPositions(positions []executor.OptionPositionLike) {
+func (t *Trade) SetEntryPositions(positions []OptionPosition) {
 	t.EntryPositions = positions
 }
 
-func (t *Trade) GetExitPositions() []executor.OptionPositionLike {
+func (t *Trade) GetExitPositions() []OptionPosition {
 	return t.ExitPositions
 }
 
-func (t *Trade) SetExitPositions(positions []executor.OptionPositionLike) {
+func (t *Trade) SetExitPositions(positions []OptionPosition) {
 	t.ExitPositions = positions
 }
 
