@@ -12,7 +12,7 @@ import (
 )
 
 type ATMcs struct {
-	ISTLocation    *time.Location
+	ISTLocation    *time.Location `json:"-"`
 	SignalCPR      cpr.Signal
 	EntrySatisfied bool
 	ExitSatisfied  bool
@@ -23,8 +23,9 @@ type ATMcs struct {
 	Trade          trade.Trade
 	Settings
 	SettingsFilesPath string
-	GetCurrentTime    func() time.Time
+	GetCurrentTime    func() time.Time `json:"-"`
 	Holidays
+	StopLossHitChan chan bool `json:"-"`
 }
 
 type Settings struct {
@@ -72,11 +73,14 @@ func (obj *ATMcs) SetSettingsFilesPath(filepath string) {
 }
 
 func (obj *ATMcs) InTradingWindow() bool {
-	return true
-}
-
-func (obj *ATMcs) InTrade() bool {
-	return obj.Trade.InTrade
+	now := obj.GetCurrentTime()
+	start := time.Date(now.Year(), now.Month(), now.Day(), 9, 14, 0, 0, obj.ISTLocation)
+	end := time.Date(now.Year(), now.Month(), now.Day(), 15, 16, 0, 0, obj.ISTLocation)
+	// fmt.Printf("%v\n%v\n%v\n", start, end, now)
+	if now.After(start) && now.Before(end) {
+		return true
+	}
+	return false
 }
 
 func (obj *ATMcs) IsError() bool {
@@ -120,16 +124,20 @@ func (obj *ATMcs) GetTradeType() executor.TradeType {
 	return obj.Trade.TradeType
 }
 
-func New(settingsFilePath, tradeFilePath string, currentTimeFunc func() time.Time) *ATMcs {
+func (obj *ATMcs) GetStopLossHitChan() <-chan bool {
+	return obj.StopLossHitChan
+}
+
+func New(settingsFilePath string, currentTimeFunc func() time.Time) *ATMcs {
 	var obj ATMcs
 	obj.SetSettingsFilesPath(settingsFilePath)
 
 	if err := obj.loadSettingsFromFile(); err != nil {
-		log.Println("SetSettingsFIlesPath(string) failed to load settings from", obj.SettingsFilesPath)
+		log.Println("error SetSettingsFIlesPath(string) failed to load settings from", obj.SettingsFilesPath)
 		return nil
 	}
 	if err := obj.LoadHolidays(); err != nil {
-		log.Printf("LoadHolidays() file from %+v:%v\n", obj.Settings.HolidayDatesFilePath, err.Error())
+		log.Printf("error LoadHolidays() file from %+v:%v\n", obj.Settings.HolidayDatesFilePath, err.Error())
 		return nil
 	}
 	if err := obj.LoadLocation(); err != nil {
@@ -144,7 +152,13 @@ func New(settingsFilePath, tradeFilePath string, currentTimeFunc func() time.Tim
 		log.Println("min target cananot be lesser than min trail in settings")
 		return nil
 	}
-	obj.SetTradeFilePath(tradeFilePath)
+	obj.SetTradeFilePath(obj.Settings.TradeFilePath)
+	if err := obj.LoadTradeFromJSON(); err != nil {
+		log.Println("error LoadTradeFromJSON() loading trade from JSON:", err.Error())
+		return nil
+	}
+
+	obj.StopLossHitChan = make(chan bool)
 	obj.GetCurrentTime = currentTimeFunc
 	obj.EntrySatisfied = false
 	obj.ExitSatisfied = false
