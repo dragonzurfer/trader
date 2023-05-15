@@ -19,7 +19,6 @@ type ATMcs struct {
 	Broker         executor.BrokerLike
 	EntryMessage   string
 	ExitMessage    string
-	SleepDuration  time.Duration
 	Trade          trade.Trade
 	Settings
 	SettingsFilesPath string
@@ -28,17 +27,37 @@ type ATMcs struct {
 	StopLossHitChan chan bool `json:"-"`
 }
 
+type DurationWrapper struct {
+	time.Duration
+}
 type Settings struct {
-	HolidayDatesFilePath string  `json:"holidays_file_path"`
-	MinTrailPercent      float64 `json:"min_trail_percent"`
-	MinTargetPercent     float64 `json:"min_target_percent"`
-	MinStopLossPercent   float64 `json:"min_sl_percent"`
-	TradeFilePath        string  `json:"tradeFilePath"`
-	Quantity             int64   `json:"quantity"`
-	StrikeDiff           float64 `json:"strikeDiff"`
-	MinDaysToExpiry      int64   `json:"minDaysToExpiry"`
-	Symbol               string  `json:"symbol"`
-	TickSize             float64 `json:"tick_size"`
+	HolidayDatesFilePath string          `json:"holidays_file_path"`
+	MinTrailPercent      float64         `json:"min_trail_percent"`
+	MinTargetPercent     float64         `json:"min_target_percent"`
+	MinStopLossPercent   float64         `json:"min_sl_percent"`
+	TradeFilePath        string          `json:"tradeFilePath"`
+	Quantity             int64           `json:"quantity"`
+	StrikeDiff           float64         `json:"strikeDiff"`
+	MinDaysToExpiry      int64           `json:"minDaysToExpiry"`
+	Symbol               string          `json:"symbol"`
+	TickSize             float64         `json:"tick_size"`
+	SleepDuration        DurationWrapper `json:"sleep_duration"`
+}
+
+func (d *DurationWrapper) UnmarshalJSON(data []byte) error {
+	var durationStr string
+	err := json.Unmarshal(data, &durationStr)
+	if err != nil {
+		return err
+	}
+
+	duration, err := time.ParseDuration(durationStr)
+	if err != nil {
+		return err
+	}
+
+	d.Duration = duration
+	return nil
 }
 
 func (obj *ATMcs) loadSettingsFromFile() error {
@@ -133,7 +152,7 @@ func New(settingsFilePath string, currentTimeFunc func() time.Time) *ATMcs {
 	obj.SetSettingsFilesPath(settingsFilePath)
 
 	if err := obj.loadSettingsFromFile(); err != nil {
-		log.Println("error SetSettingsFIlesPath(string) failed to load settings from", obj.SettingsFilesPath)
+		log.Println("error SetSettingsFIlesPath(string) failed to load settings from: %w", obj.SettingsFilesPath, err)
 		return nil
 	}
 	if err := obj.LoadHolidays(); err != nil {
