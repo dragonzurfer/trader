@@ -9,7 +9,7 @@ type ExecutorLike interface {
 	InTradingWindow() bool
 	InTrade() bool
 	IsEntrySatisfied() bool
-	IsExitSatisfied() bool
+	GetStopLossHitChan() <-chan bool
 	GetEntryMessage() string
 	GetExitMessage() string
 	IsError() bool
