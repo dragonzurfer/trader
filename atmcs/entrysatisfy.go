@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"log"
-	"math"
 	"time"
 
 	cpr "github.com/dragonzurfer/strategy/CPR"
@@ -34,23 +33,19 @@ func (obj *ATMcs) SetSignal() error {
 
 func (obj *ATMcs) SetEntryStates() {
 	if obj.SignalCPR.Signal == cpr.Neutral {
-		obj.EntrySatisfied = false
-		obj.Trade.TradeType = executor.Nuetral
-		obj.Trade.TargetPrice = math.SmallestNonzeroFloat64
-		obj.Trade.StopLossPrice = math.SmallestNonzeroFloat64
 		return
 	}
-	obj.EntrySatisfied = true
-	obj.ExitSatisfied = false
-	obj.Trade.TargetPrice = obj.SignalCPR.TargetPrice
 	obj.Trade.StopLossPrice = obj.SignalCPR.StopLossPrice
 	obj.Trade.EntryPrice = obj.SignalCPR.EntryPrice
+	obj.Trade.TargetPrice = obj.SignalCPR.TargetPrice
 	switch obj.SignalCPR.Signal {
 	case cpr.Buy:
 		obj.Trade.TradeType = executor.Buy
 	case cpr.Sell:
 		obj.Trade.TradeType = executor.Sell
 	}
+	obj.ExitSatisfied = false
+	obj.EntrySatisfied = true
 }
 
 func (obj *ATMcs) GetCandles() (cpr.CPRCandles, cpr.CPRCandles, error) {

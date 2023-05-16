@@ -17,6 +17,8 @@ func (obj *ATMcs) PaperTrade(tradeType executor.TradeType) {
 	obj.Trade.InTrade = true
 	obj.Trade.EntryPositions = obj.makeEntryPositions(tradeType)
 	obj.Trade.TimeOfEntry = obj.GetCurrentTime()
+	obj.Trade.IsMinTrailHit = false
+	obj.Trade.IsStopLossHit = false
 }
 
 func (obj *ATMcs) makeEntryPositions(tradeType executor.TradeType) []trade.OptionPosition {
@@ -69,8 +71,8 @@ func (obj *ATMcs) makeEntryPositions(tradeType executor.TradeType) []trade.Optio
 		log.Println(err.Error())
 		return nil
 	}
-	sellPosition.Price = obj.GetAvgMarketDepth(bids)
-	buyPosition.Price = obj.GetAvgMarketDepth(asks)
+	sellPosition.Price, obj.Trade.DepthQuantityEntrySell = obj.GetAvgMarketDepth(bids)
+	buyPosition.Price, obj.Trade.DepthQuantityEntryBuy = obj.GetAvgMarketDepth(asks)
 	entryPositions = append(entryPositions, sellPosition, buyPosition)
 	return entryPositions
 }
@@ -91,9 +93,9 @@ func (obj *ATMcs) MakeEntryPosition(symbol string, strike float64, expiry execut
 	return optionPosition
 }
 
-func (obj *ATMcs) GetAvgMarketDepth(depth []executor.MarketDepthLike) float64 {
+func (obj *ATMcs) GetAvgMarketDepth(depth []executor.MarketDepthLike) (float64, float64) {
 	if len(depth) == 0 {
-		return 0
+		return 0, 0
 	}
 
 	total := 0.0
@@ -105,7 +107,7 @@ func (obj *ATMcs) GetAvgMarketDepth(depth []executor.MarketDepthLike) float64 {
 	}
 
 	if totalVolumeOrders == 0 {
-		return 0
+		return 0, 0
 	}
 
 	avgPrice := total / totalVolumeOrders
@@ -115,7 +117,7 @@ func (obj *ATMcs) GetAvgMarketDepth(depth []executor.MarketDepthLike) float64 {
 	}
 	decimalPlaces := countDecimalPlaces(obj.Settings.TickSize)
 	roundedPrice = truncateDecimal(roundedPrice, decimalPlaces)
-	return roundedPrice
+	return roundedPrice, totalVolumeOrders
 }
 
 func GetBids(broker executor.BrokerLike, pos trade.OptionPosition) ([]executor.MarketDepthLike, error) {

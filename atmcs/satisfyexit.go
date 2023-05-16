@@ -14,14 +14,18 @@ func (obj *ATMcs) ExitOnTick(tickPrice float64) {
 	if obj.InTrade() {
 		obj.SetMinTrail(tickPrice)
 		if obj.IsHitTickSL(tickPrice) {
-			obj.StopLossHitChan <- true
+			go func() {
+				obj.StopLossHitChan <- true
+			}()
 			obj.Trade.IsStopLossHit = true
 			obj.ExitSatisfied = true
 			obj.Trade.TimeOfExit = obj.GetCurrentTime()
 			return
 		}
 		if obj.IsHitTickTarget(tickPrice) {
-			obj.TargetHitChan <- true
+			go func() {
+				obj.TargetHitChan <- true
+			}()
 			obj.ExitSatisfied = true
 			obj.Trade.TimeOfExit = obj.GetCurrentTime()
 			return
@@ -71,6 +75,9 @@ func (obj *ATMcs) SetMinTrail(tickPrice float64) {
 		if !obj.Trade.IsMinTrailHit {
 			obj.Trade.IsMinTrailHit = true
 			obj.Trade.StopLossPrice = obj.Trade.EntryPrice
+			go func() {
+				obj.TrailChan <- true
+			}()
 		}
 	}
 }

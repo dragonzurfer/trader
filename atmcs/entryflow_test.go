@@ -73,6 +73,7 @@ type TestScenario struct {
 	TimeObj          *time.Time
 	SlHitChannel     <-chan bool
 	TargetHitChannel <-chan bool
+	TrailChannel     <-chan bool
 	T                *testing.T
 	atm              executor.ExecutorLike
 	atmRef           *atmcs.ATMcs
@@ -131,7 +132,7 @@ func (b *TestScenarioBroker) GetCandles(symbol string, startTime time.Time, endT
 	} else {
 		index = len(data.Candles)
 	}
-	fmt.Println(startTime, ":", endTime)
+	// fmt.Println(startTime, ":", endTime)
 	candles := NewBrokerCandleLikeAdapter(data.Candles[0:index])
 	if len(candles) < 1 {
 		return nil, errors.New("Emtpy candles BrokerLike.GetCandles")
@@ -337,18 +338,11 @@ func TestFlow(t *testing.T) {
 	log.SetFlags(log.Lshortfile)
 
 	testCases := []string{
-		"scene2.json",
+		"scene5.json",
 		// Add more test case file names here
 	}
 	settings := []string{
-		"testcase1settings.json",
-		"testcase1settings.json",
-		"testcase1settings.json",
-		"testcase1settings.json",
-		"testcase1settings.json",
-		"testcase1settings.json",
-		"testcase1settings.json",
-		"testcase1settings.json",
+		"scene_settings.json",
 	}
 	for i, tc := range testCases {
 		fmt.Println("Running testecase file ", tc)
@@ -374,7 +368,7 @@ func TestFlow(t *testing.T) {
 		if err != nil {
 			t.Fatalf("Error getting current file path: %v", err)
 		}
-		settingsFilePath := filepath.Join(currentFilePath, "testcases", "entry", settingsFileName)
+		settingsFilePath := filepath.Join(currentFilePath, "testcases", "flow", settingsFileName)
 
 		timeObj = testCase.CurrentTime.Add(-5 * time.Minute)
 		var atm executor.ExecutorLike
@@ -399,31 +393,37 @@ func TestFlow(t *testing.T) {
 				timeObj = timeObj.Add(5 * time.Minute)
 				inTrade := atm.InTrade()
 				if !inTrade && atm.IsEntrySatisfied() {
-					fmt.Printf("%+v\n", atmRef)
 					atm.PaperTrade(atm.GetTradeType())
 					err := atm.LogTrade()
 					assert.Nil(t, err, "Expected err to be nil")
+					fmt.Println(atm.GetEntryMessage())
 				}
 				if inTrade {
 					// t.SkipNow()
 					slHitChannel := atm.GetStopLossHitChan()
 					targetHitChannel := atm.GetTargetHitChan()
-
+					trailChannel := atmRef.GetTrailChan()
+					testCase.TrailChannel = trailChannel
 					testCase.SlHitChannel = slHitChannel
 					testCase.TargetHitChannel = targetHitChannel
 					fmt.Println("listening to channels")
 					testCase.listenToChannels()
+					err := atm.LogTrade()
+					assert.Nil(t, err, "Expected err to be nil")
+					fmt.Println(atm.GetExitMessage())
 				}
 			} else {
 				if atm.InTrade() {
+					t.Fatalf("Shouldn't be here")
 					testCase.atm.ExitPaper()
+					err := atm.LogTrade()
+					assert.Nil(t, err, "Expected err to be nil")
+					fmt.Println(atm.GetExitMessage())
 				}
 				break
 			}
 			time.Sleep(time.Millisecond * 200)
-			fmt.Println("Checking states at:", testCase.TimeObj)
 			testCase.CheckState(atmRef, t)
-			fmt.Println("Check states PASS")
 			testCase.SetModuloDurationZero()
 		}
 	}
@@ -488,7 +488,7 @@ func (scene *TestScenario) listenToChannels() {
 					return
 				}
 			} else {
-				// stop loss hit channel is closed, handle it here if needed
+				scene.T.Fatal("sl Channel closed")
 				return
 			}
 		case targetHit, ok := <-scene.TargetHitChannel:
@@ -502,7 +502,17 @@ func (scene *TestScenario) listenToChannels() {
 					return
 				}
 			} else {
-				// target hit channel is closed, handle it here if needed
+				scene.T.Fatal("target Channel closed")
+
+				return
+			}
+		case trail, ok := <-scene.TrailChannel:
+			if ok {
+				if trail {
+					fmt.Println("Trail to cost")
+				}
+			} else {
+				scene.T.Fatal("trail Channel closed")
 				return
 			}
 		case <-marketCloseChan:

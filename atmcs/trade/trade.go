@@ -32,18 +32,22 @@ func (o Option) GetOptionSymbol() string            { return o.Symbol }
 func (o Option) GetUnderlyingSymbol() string        { return o.UnderlyingSymbol }
 
 type Trade struct {
-	InTrade            bool
-	EntryPositions     []OptionPosition
-	ExitPositions      []OptionPosition
-	TimeOfEntry        time.Time
-	TimeOfExit         time.Time
-	TrailStopLossPrice float64
-	StopLossPrice      float64
-	TargetPrice        float64
-	EntryPrice         float64
-	TradeType          executor.TradeType
-	IsMinTrailHit      bool
-	IsStopLossHit      bool
+	InTrade                bool
+	EntryPositions         []OptionPosition
+	ExitPositions          []OptionPosition
+	TimeOfEntry            time.Time
+	TimeOfExit             time.Time
+	TrailStopLossPrice     float64
+	StopLossPrice          float64
+	TargetPrice            float64
+	EntryPrice             float64
+	TradeType              executor.TradeType
+	IsMinTrailHit          bool
+	IsStopLossHit          bool
+	DepthQuantityEntrySell float64
+	DepthQuantityEntryBuy  float64
+	DepthQuantityExitSell  float64
+	DepthQuantityExitBuy   float64
 }
 
 func (t *Trade) GetEntryPositions() []OptionPosition {

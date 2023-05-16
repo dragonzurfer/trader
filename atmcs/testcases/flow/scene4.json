@@ -1,0 +1,96 @@
+{
+    "current_time": "2023-05-10T09:15:00+05:30",
+    "tick_prices": [
+        {
+            "time": "2023-05-10T10:34:00+05:30",
+            "price": 18272.8
+        },
+        {
+            "time": "2023-05-10T10:44:00+05:30",
+            "price": 18237.95
+        }, {
+            "time": "2023-05-10T11:33:00+05:30",
+            "price": 18281.65
+        }
+    ],
+    "option_chains": [
+      {
+        "ExpiryDate": "2023-05-18T00:00:00+05:30"
+      },
+      {
+        "ExpiryDate": "2023-05-25T00:00:00+05:30"
+      },
+      {
+        "ExpiryDate": "2023-06-01T00:00:00+05:30"
+      },
+      {
+        "ExpiryDate": "2023-06-29T00:00:00+05:30"
+      }
+    ],
+    "option_depths": {
+      "2023-05-18T00:00:00+05:30": {
+        "bids": [
+          {
+            "price": 112,
+            "quantity": 10,
+            "num_of_orders": 1
+          }
+        ],
+        "asks": [
+          {
+            "price": 113,
+            "quantity": 20,
+            "num_of_orders": 1
+          }
+        ]
+      },
+      "2023-05-25T00:00:00+05:30": {
+        "bids": [
+          {
+            "price": 130,
+            "quantity": 10,
+            "num_of_orders": 1
+          }
+        ],
+        "asks": [
+          {
+            "price": 130.5,
+            "quantity": 20,
+            "num_of_orders": 1
+          }
+        ]
+      },
+      "2023-06-01T00:00:00+05:30": {
+        "bids": [
+          {
+            "price": 142,
+            "quantity": 10,
+            "num_of_orders": 1
+          }
+        ],
+        "asks": [
+          {
+            "price": 145,
+            "quantity": 20,
+            "num_of_orders": 1
+          }
+        ]
+      },
+      "2023-06-29T00:00:00+05:30": {
+        "bids": [
+          {
+            "price": 170,
+            "quantity": 10,
+            "num_of_orders": 1
+          }
+        ],
+        "asks": [
+          {
+            "price": 172,
+            "quantity": 20,
+            "num_of_orders": 1
+          }
+        ]
+      }
+    }
+  }

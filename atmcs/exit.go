@@ -23,9 +23,18 @@ func (obj *ATMcs) ExitPaper() {
 	}
 
 	// Clear the current trade
-	obj.Trade.InTrade = false
 	obj.Trade.ExitPositions = exitPositions
+	obj.Trade.InTrade = false
 	obj.Trade.TimeOfExit = obj.GetCurrentTime()
+	obj.Trade.StopLossPrice = 0
+	obj.Trade.EntryPrice = 0
+	obj.Trade.TargetPrice = 0
+	obj.Trade.TradeType = executor.Nuetral
+	obj.Trade.IsMinTrailHit = false
+	obj.Trade.IsStopLossHit = true
+	obj.ExitSatisfied = true
+	obj.EntrySatisfied = false
+
 }
 
 func (obj *ATMcs) MakeExitPositions() ([]trade.OptionPosition, error) {
@@ -59,7 +68,15 @@ func (obj *ATMcs) MakePositionExit(entryPosition trade.OptionPosition) (trade.Op
 		return exitPosition, errors.New("failed to MakeExitPosition():" + err.Error())
 	}
 
-	currentPrice := obj.GetAvgMarketDepth(depth)
+	currentPrice, depthQuantity := obj.GetAvgMarketDepth(depth)
+	if entryPosition.TradeType == executor.Buy {
+		obj.Trade.DepthQuantityExitBuy = depthQuantity
+	}
+
+	if entryPosition.TradeType == executor.Sell {
+		obj.Trade.DepthQuantityExitSell = depthQuantity
+	}
+
 	if currentPrice == 0 {
 		return exitPosition, fmt.Errorf("could not get exit price for %v", entryPosition.GetOptionSymbol())
 

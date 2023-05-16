@@ -1,0 +1,105 @@
+{
+    "current_time": "2023-05-03T12:25:00+05:30",
+    "tick_prices": [
+        {
+            "time": "2023-05-03T13:24:00+05:30",
+            "price": 18100.55
+        },
+        {
+            "time": "2023-05-03T13:39:00+05:30",
+            "price": 18074
+        },
+        {
+            "time": "2023-05-03T14:34:00+05:30",
+            "price": 18101.05
+        },
+        {
+            "time": "2023-05-03T14:59:00+05:30",
+            "price": 18070.15
+        },
+        {
+            "time": "2023-05-13T15:19:00+05:30",
+            "price": 18102.6
+        }
+    ],
+    "option_chains": [
+      {
+        "ExpiryDate": "2023-05-18T00:00:00+05:30"
+      },
+      {
+        "ExpiryDate": "2023-05-25T00:00:00+05:30"
+      },
+      {
+        "ExpiryDate": "2023-06-01T00:00:00+05:30"
+      },
+      {
+        "ExpiryDate": "2023-06-29T00:00:00+05:30"
+      }
+    ],
+    "option_depths": {
+      "2023-05-18T00:00:00+05:30": {
+        "bids": [
+          {
+            "price": 112,
+            "quantity": 10,
+            "num_of_orders": 1
+          }
+        ],
+        "asks": [
+          {
+            "price": 113,
+            "quantity": 20,
+            "num_of_orders": 1
+          }
+        ]
+      },
+      "2023-05-25T00:00:00+05:30": {
+        "bids": [
+          {
+            "price": 130,
+            "quantity": 10,
+            "num_of_orders": 1
+          }
+        ],
+        "asks": [
+          {
+            "price": 130.5,
+            "quantity": 20,
+            "num_of_orders": 1
+          }
+        ]
+      },
+      "2023-06-01T00:00:00+05:30": {
+        "bids": [
+          {
+            "price": 142,
+            "quantity": 10,
+            "num_of_orders": 1
+          }
+        ],
+        "asks": [
+          {
+            "price": 145,
+            "quantity": 20,
+            "num_of_orders": 1
+          }
+        ]
+      },
+      "2023-06-29T00:00:00+05:30": {
+        "bids": [
+          {
+            "price": 170,
+            "quantity": 10,
+            "num_of_orders": 1
+          }
+        ],
+        "asks": [
+          {
+            "price": 172,
+            "quantity": 20,
+            "num_of_orders": 1
+          }
+        ]
+      }
+    }
+  }
