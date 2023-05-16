@@ -22,7 +22,7 @@ type ExecutorLike interface {
 	ExitAccount()
 	LogTrade() error
 	LoadFromJSON() error
-	GetTargetHitChan()
+	GetTargetHitChan() <-chan bool
 }
 
 type Trader struct {
