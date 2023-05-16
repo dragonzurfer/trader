@@ -1,43 +1,37 @@
 package atmcs
 
 import (
+	"fmt"
+
 	"github.com/dragonzurfer/trader/executor"
 )
 
-// func (obj *ATMcs) SubscribeCheckSL() {
+func (obj *ATMcs) UpdateSL() {
 
-// 	onMessageFunc := func(notification api.Notification) {
-// 		fmt.Println(notification.Type, notification.SymbolData)
-// 		obj.SetMinTrail(float64(notification.SymbolData.Ltp))
-// 		isHitTickSL := obj.IsHitTickSL(float64(notification.SymbolData.Ltp))
-// 		if isHitTickSL {
-// 			// send to cahnnel
-// 			obj.StopLossHitChan <- true
-// 		}
-// 	}
+}
 
-// 	onErrorFunc := func(err error) {
-// 		log.Errorf("failed to watch | disconnected from watch. %v", err)
-// 	}
-
-// 	onCloseFunc := func() {
-// 		log.Println("watch connection is closed")
-// 	}
-
-// 	cli := fyerswatch.New()
-// 	WithOnMessageFunc(onMessageFunc).
-// 		WithOnErrorFunc(onErrorFunc).
-// 		WithOnCloseFunc(onCloseFunc)
-
-// 	// this is a blocking call
-// 	cli.Subscribe(api.SymbolDataTick, obj.Symbol)
-// }
+func (obj *ATMcs) ExitOnTick(tickPrice float64) {
+	if obj.InTrade() {
+		obj.SetMinTrail(tickPrice)
+		if obj.IsHitTickSL(tickPrice) {
+			obj.StopLossHitChan <- true
+			obj.Trade.IsStopLossHit = true
+			obj.ExitSatisfied = true
+			obj.Trade.TimeOfExit = obj.GetCurrentTime()
+			return
+		}
+		if obj.IsHitTickTarget(tickPrice) {
+			obj.TargetHitChan <- true
+			obj.ExitSatisfied = true
+			obj.Trade.TimeOfExit = obj.GetCurrentTime()
+			return
+		}
+	}
+}
 
 // will be called while creating broker object
 func (obj *ATMcs) IsHitTickSL(tickPrice float64) bool {
-	if !obj.InTrade() {
-		return false
-	}
+
 	switch obj.Trade.TradeType {
 	case executor.Buy:
 		return tickPrice <= obj.Trade.StopLossPrice
@@ -47,12 +41,18 @@ func (obj *ATMcs) IsHitTickSL(tickPrice float64) bool {
 	return false
 }
 
-func (obj *ATMcs) SetMinTrail(tickPrice float64) {
-	// Check if a trade is active
-	if !obj.InTrade() {
-		obj.Trade.IsMinTrailHit = false
+func (obj *ATMcs) IsHitTickTarget(tickPrice float64) bool {
+	switch obj.Trade.TradeType {
+	case executor.Buy:
+		return tickPrice >= obj.Trade.TargetPrice
+	case executor.Sell:
+		return tickPrice <= obj.Trade.TargetPrice
 	}
+	fmt.Println(tickPrice, obj.Trade.TargetPrice)
+	return false
+}
 
+func (obj *ATMcs) SetMinTrail(tickPrice float64) {
 	// Calculate the absolute price change as a percentage
 	priceChangePercent := 0.0
 	if obj.Trade.TradeType == executor.Buy {

@@ -8,7 +8,7 @@ import (
 	"path/filepath"
 )
 
-func (obj *ATMcs) LoadTradeFromJSON() error {
+func (obj *ATMcs) LoadFromJSON() error {
 	fullPath := filepath.Join(obj.Settings.TradeFilePath)
 
 	// Open the file
@@ -33,7 +33,7 @@ func (obj *ATMcs) LoadTradeFromJSON() error {
 	return nil
 }
 
-func (obj *ATMcs) WriteATMcsTradeToJSON() error {
+func (obj *ATMcs) LogTrade() error {
 	// Convert the Trade object to a JSON string
 	tradeJSON, err := json.MarshalIndent(obj.Trade, "", "  ")
 	if err != nil {

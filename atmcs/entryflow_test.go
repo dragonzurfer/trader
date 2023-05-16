@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
-	"math"
 	"os"
 	"path/filepath"
 	"testing"
@@ -17,6 +16,7 @@ import (
 	cpr "github.com/dragonzurfer/strategy/CPR"
 	"github.com/dragonzurfer/trader/atmcs"
 	"github.com/dragonzurfer/trader/executor"
+	"github.com/stretchr/testify/assert"
 )
 
 var timeObj time.Time
@@ -54,8 +54,9 @@ type SceneATMcs struct {
 }
 
 type TickPrice struct {
-	Time  time.Time `json:"time"`
-	Price float64   `json:"price"`
+	Time   time.Time `json:"time"`
+	Price  float64   `json:"price"`
+	IsSent bool
 }
 
 type TimeState struct {
@@ -64,11 +65,17 @@ type TimeState struct {
 }
 
 type TestScenario struct {
-	CurrentTime  time.Time            `json:"current_time"`
-	TickPrices   []TickPrice          `json:"tick_prices"`
-	TimeStates   []TimeState          `json:"time_states"`
-	Expiries     []executor.Expiry    `json:"option_chains"`
-	OptionDepths map[time.Time]BidAsk `json:"option_depths"`
+	CurrentTime      time.Time            `json:"current_time"`
+	TickPrices       []TickPrice          `json:"tick_prices"`
+	TimeStates       []TimeState          `json:"time_states"`
+	Expiries         []executor.Expiry    `json:"option_chains"`
+	OptionDepths     map[time.Time]BidAsk `json:"option_depths"`
+	TimeObj          *time.Time
+	SlHitChannel     <-chan bool
+	TargetHitChannel <-chan bool
+	T                *testing.T
+	atm              executor.ExecutorLike
+	atmRef           *atmcs.ATMcs
 }
 
 type TestScenarioBroker struct {
@@ -175,34 +182,149 @@ func NewScenarioBroker(t *testing.T) TestScenarioBroker {
 
 func (e *SceneATMcs) StatesEqual(a *atmcs.ATMcs) bool {
 	// fmt.Printf("expect:%v actual:%v\n", 1, 2)
-	if math.Abs(e.SignalCPR.EntryPrice-a.SignalCPR.EntryPrice) >= 1 {
-		fmt.Printf("EntryPrice Expect:%v Actual:%v\n", e.SignalCPR.EntryPrice, a.SignalCPR.EntryPrice)
+	if a == nil {
+		log.Println("Getting nil for actual ATMcs")
 		return false
 	}
-	if math.Abs(e.SignalCPR.StopLossPrice-a.SignalCPR.StopLossPrice) >= 1 {
-		fmt.Printf("StopLossPrice Expect:%v Actual:%v\n", e.SignalCPR.StopLossPrice, a.SignalCPR.StopLossPrice)
+	if e == nil {
+		log.Println("Getting nil for expected ATMcs")
 		return false
 	}
-	if math.Abs(e.SignalCPR.TargetPrice-a.SignalCPR.TargetPrice) >= 1 {
-		fmt.Printf("TargetPrice Expect:%v Actual:%v\n", e.SignalCPR.TargetPrice, a.SignalCPR.TargetPrice)
-		return false
-	}
+
 	if e.EntrySatisfied != a.EntrySatisfied {
-		fmt.Printf("EntrySatisfied Expect:%v Actual:%v\n", e.EntrySatisfied, a.EntrySatisfied)
+		log.Printf("EntrySatisfied Expect:%v Actual:%v\n", e.EntrySatisfied, a.EntrySatisfied)
 		return false
 	}
 	if e.ExitSatisfied != a.ExitSatisfied {
-		fmt.Printf("ExitSatisfied Expect:%v Actual:%v\n", e.ExitSatisfied, a.ExitSatisfied)
+		log.Printf("ExitSatisfied Expect:%v Actual:%v\n", e.ExitSatisfied, a.ExitSatisfied)
 		return false
 	}
 	// Trade
+	et := e.Trade
+	at := a.Trade
+
+	if et.InTrade != at.InTrade {
+		log.Printf("InTrade Expect:%v Actual:%v\n", et.InTrade, at.InTrade)
+		return false
+	}
+	if !et.TimeOfEntry.Equal(at.TimeOfEntry) {
+		log.Printf("TimeOfEntry Expect:%v Actual:%v\n", et.TimeOfEntry, at.TimeOfEntry)
+		return false
+	}
+	if !et.TimeOfExit.Equal(at.TimeOfExit) {
+		log.Printf("TimeOfExit Expect:%v Actual:%v\n", et.TimeOfExit, at.TimeOfExit)
+		return false
+	}
+
+	if et.TradeType != at.TradeType {
+		log.Printf("TradeType Expect:%v Actual:%v\n", et.TradeType, at.TradeType)
+		return false
+	}
+	if et.IsMinTrailHit != at.IsMinTrailHit {
+		log.Printf("IsMinTrailHit Expect:%v Actual:%v\n", et.IsMinTrailHit, at.IsMinTrailHit)
+		return false
+	}
+	if et.IsStopLossHit != at.IsStopLossHit {
+		log.Printf("IsStopLossHit Expect:%v Actual:%v\n", et.IsStopLossHit, at.IsStopLossHit)
+		return false
+	}
+	if e.EntrySatisfied {
+		if at.EntryPositions == nil {
+			log.Printf("Entry positions empty Expected:%+v\n", et.ExitPositions)
+			return false
+		}
+	}
+	if len(at.EntryPositions) != len(et.EntryPositions) {
+		log.Printf("Length of entries Actual:%v Expected:%v", len(at.EntryPositions), len(et.EntryPositions))
+		return false
+	}
+
+	n := len(at.EntryPositions)
+	apos := at.EntryPositions
+	epos := et.EntryPositions
+	for i := 0; i < n; i += 1 {
+		if apos[i].Option.Strike != epos[i].Option.Strike {
+			log.Printf("Option mismatch\nExpect:%+v\nActual:%+v\n", epos[i].Option, apos[i].Option)
+			return false
+		}
+		if apos[i].Option.Type != epos[i].Option.Type {
+			log.Printf("Option mismatch\nExpect:%+v\nActual:%+v\n", epos[i].Option, apos[i].Option)
+			return false
+		}
+		if apos[i].Option.UnderlyingSymbol != epos[i].Option.UnderlyingSymbol {
+			log.Printf("Option mismatch\nExpect:%+v\nActual:%+v\n", epos[i].Option, apos[i].Option)
+			return false
+		}
+		if !apos[i].Option.Expiry.Equal(epos[i].Option.Expiry) {
+			log.Printf("Option mismatch\nExpect:%+v\nActual:%+v\n", epos[i].Option, apos[i].Option)
+			return false
+		}
+
+		if apos[i].Price != epos[i].Price {
+			log.Printf("Price Expected:%v Actual:%v\n", epos[i].Price, apos[i].Price)
+			return false
+		}
+		if apos[i].TradeType != epos[i].TradeType {
+			log.Printf("Type Expected:%+v Actual:%v\n", epos[i], apos[i].TradeType)
+			return false
+		}
+		if apos[i].Quantity != epos[i].Quantity {
+			log.Printf("Quantity Expected:%v Actual:%v\n", epos[i].Quantity, apos[i].Quantity)
+			return false
+		}
+	}
+	if e.ExitSatisfied {
+		if at.ExitPositions == nil {
+			log.Printf("Exit positions empty Expected:%+v\n", et.ExitPositions)
+			return false
+		}
+	}
+	if len(at.ExitPositions) != len(et.ExitPositions) {
+		log.Printf("Length of entries Actual:%v Expected:%v\n", len(at.ExitPositions), len(et.ExitPositions))
+		return false
+	}
+	n = len(at.ExitPositions)
+	apos = at.ExitPositions
+	epos = et.ExitPositions
+	for i := 0; i < n; i += 1 {
+		if apos[i].Option.Strike != epos[i].Option.Strike {
+			log.Printf("Option mismatch\nExpect:%+v\nActual:%+v\n", epos[i].Option, apos[i].Option)
+			return false
+		}
+		if apos[i].Option.Type != epos[i].Option.Type {
+			log.Printf("Option mismatch\nExpect:%+v\nActual:%+v\n", epos[i].Option, apos[i].Option)
+			return false
+		}
+		if apos[i].Option.UnderlyingSymbol != epos[i].Option.UnderlyingSymbol {
+			log.Printf("Option mismatch\nExpect:%+v\nActual:%+v\n", epos[i].Option, apos[i].Option)
+			return false
+		}
+		if !apos[i].Option.Expiry.Equal(epos[i].Option.Expiry) {
+			log.Printf("Option mismatch\nExpect:%+v\nActual:%+v\n", epos[i].Option, apos[i].Option)
+			return false
+		}
+
+		if apos[i].Price != epos[i].Price {
+			log.Printf("Price Expected:%v Actual:%v\n", epos[i].Price, apos[i].Price)
+			return false
+		}
+		if apos[i].TradeType != epos[i].TradeType {
+			log.Printf("Price Expected:%v Actual:%v\n", epos[i].TradeType, apos[i].TradeType)
+			return false
+		}
+		if apos[i].Quantity != epos[i].Quantity {
+			log.Printf("Price Expected:%v Actual:%v\n", epos[i].Quantity, apos[i].Quantity)
+			return false
+		}
+	}
 	return true
 }
 
 func (b *TestScenario) CheckState(a *atmcs.ATMcs, t *testing.T) {
-	now := timeObj
+	now := b.TimeObj
 	for _, timestate := range b.TimeStates {
-		if timestate.Time.Equal(now) {
+		if timestate.Time.Equal(*now) {
+			fmt.Println("found state for time:", now)
 			if !timestate.ATMcsState.StatesEqual(a) {
 				t.Fatalf("States Not matching")
 			}
@@ -215,7 +337,7 @@ func TestFlow(t *testing.T) {
 	log.SetFlags(log.Lshortfile)
 
 	testCases := []string{
-		"scene1.json",
+		"scene2.json",
 		// Add more test case file names here
 	}
 	settings := []string{
@@ -255,37 +377,138 @@ func TestFlow(t *testing.T) {
 		settingsFilePath := filepath.Join(currentFilePath, "testcases", "entry", settingsFileName)
 
 		timeObj = testCase.CurrentTime.Add(-5 * time.Minute)
-		var actualObj executor.ExecutorLike
+		var atm executor.ExecutorLike
 		timeFunc := func() time.Time {
-			timeObj = timeObj.Add(5 * time.Minute)
 			return timeObj
 		}
-		var actualObjATMcs = atmcs.New(settingsFilePath, timeFunc)
-		actualObj = actualObjATMcs
-		if actualObjATMcs == nil {
+		var atmRef = atmcs.New(settingsFilePath, timeFunc)
+		atm = atmRef
+		if atmRef == nil {
 			t.Fatalf("ATMcs object init fail")
 		}
 		broker := NewScenarioBroker(t)
 		broker.Expiries = testCase.Expiries
 		broker.BidAsks = testCase.OptionDepths
-		actualObj.SetBroker(&broker)
+		atm.SetBroker(&broker)
+		testCase.TimeObj = &timeObj
+		testCase.atm = atm
+		testCase.atmRef = atmRef
+		timeObj = timeObj.Add(5 * time.Minute)
 		for {
-			if actualObj.InTradingWindow() {
-				inTrade := actualObj.InTrade()
-				if !inTrade && actualObj.IsEntrySatisfied() {
-					fmt.Printf("%+v\n", actualObjATMcs)
-					// t.SkipNow()
-					// actualObj.PaperTrade(actualObj.GetTradeType())
+			if atm.InTradingWindow() {
+				timeObj = timeObj.Add(5 * time.Minute)
+				inTrade := atm.InTrade()
+				if !inTrade && atm.IsEntrySatisfied() {
+					fmt.Printf("%+v\n", atmRef)
+					atm.PaperTrade(atm.GetTradeType())
+					err := atm.LogTrade()
+					assert.Nil(t, err, "Expected err to be nil")
 				}
 				if inTrade {
-					t.SkipNow()
+					// t.SkipNow()
+					slHitChannel := atm.GetStopLossHitChan()
+					targetHitChannel := atm.GetTargetHitChan()
+
+					testCase.SlHitChannel = slHitChannel
+					testCase.TargetHitChannel = targetHitChannel
+					fmt.Println("listening to channels")
+					testCase.listenToChannels()
 				}
 			} else {
+				if atm.InTrade() {
+					testCase.atm.ExitPaper()
+				}
 				break
 			}
 			time.Sleep(time.Millisecond * 200)
-			testCase.CheckState(actualObjATMcs, t)
+			fmt.Println("Checking states at:", testCase.TimeObj)
+			testCase.CheckState(atmRef, t)
+			fmt.Println("Check states PASS")
+			testCase.SetModuloDurationZero()
 		}
 	}
 
+}
+
+func (scene *TestScenario) SetModuloDurationZero() {
+	now := scene.TimeObj
+	marketOpenTime := time.Date(now.Year(), now.Month(), now.Day(), 9, 15, 0, 0, ISTLocation)
+	duration := scene.atm.GetSleepDuration()
+	for {
+		durationSinceMarketOpen := now.Sub(marketOpenTime)
+		if int(durationSinceMarketOpen.Seconds())%int(duration.Seconds()) == 0 {
+			break
+		}
+		*now = now.Add(time.Second)
+	}
+	scene.TimeObj = now
+}
+
+func (scene *TestScenario) listenToChannels() {
+	defer fmt.Println("returning from listenToChannels")
+	marketCloseChan := make(chan bool)
+	go func() {
+		defer fmt.Println("done ticking")
+		for {
+
+			// scene.CheckState(scene.atmRef, scene.T)
+			*scene.TimeObj = scene.TimeObj.Add(time.Minute)
+			fmt.Println("time is :", scene.TimeObj)
+			for i, tickprice := range scene.TickPrices {
+				if scene.TimeObj.After(tickprice.Time) && !tickprice.IsSent {
+					scene.TickPrices[i].IsSent = true
+					fmt.Println("sending tick:", tickprice.Price)
+					go scene.atm.ExitOnTick(tickprice.Price)
+					time.Sleep(time.Millisecond * 200)
+				}
+			}
+			marketCloseTime := time.Date(scene.TimeObj.Year(), scene.TimeObj.Month(), scene.TimeObj.Day(), 15, 15, 0, 0, ISTLocation)
+			if scene.atmRef.ExitSatisfied {
+				fmt.Println("exit done")
+				return
+			}
+			if scene.TimeObj.After(marketCloseTime) {
+				fmt.Println("market closed")
+				marketCloseChan <- true
+				return
+			}
+		}
+	}()
+
+	for {
+		select {
+		case slHit, ok := <-scene.SlHitChannel:
+			if ok {
+				if slHit {
+					fmt.Println("Stop Loss hit!")
+					scene.atm.ExitPaper()
+					return
+				} else {
+					fmt.Println("SL not hit")
+					return
+				}
+			} else {
+				// stop loss hit channel is closed, handle it here if needed
+				return
+			}
+		case targetHit, ok := <-scene.TargetHitChannel:
+			if ok {
+				if targetHit {
+					fmt.Println("Target hit!")
+					scene.atm.ExitPaper()
+					return
+				} else {
+					fmt.Println("target not hit")
+					return
+				}
+			} else {
+				// target hit channel is closed, handle it here if needed
+				return
+			}
+		case <-marketCloseChan:
+			fmt.Println("Market about to close, exiting.")
+			scene.atm.ExitPaper()
+			return
+		}
+	}
 }

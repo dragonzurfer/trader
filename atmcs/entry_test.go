@@ -76,8 +76,8 @@ type Option struct {
 type OptionPosition struct {
 	Option
 	Price     float64            `json:"price"`
-	TradeType executor.TradeType `json:"trade_type"`
-	Quantity  int64              `json:"quantity"`
+	TradeType executor.TradeType `json:"TradeType"`
+	Quantity  int64              `json:"Quantity"`
 }
 
 func (op OptionPosition) GetTradeType() executor.TradeType { return op.TradeType }

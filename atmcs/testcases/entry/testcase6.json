@@ -21,7 +21,7 @@
           "symbol": "NSE:NIFTY50-INDEX",
           "underlying_symbol": "NSE:NIFTY50-INDEX",
           "price": 130,
-          "trade_type": "Sell",
+          "TradeType": "Sell",
           "quantity": 3600
         },
         {
@@ -31,7 +31,7 @@
           "symbol": "NSE:NIFTY50-INDEX",
           "underlying_symbol": "NSE:NIFTY50-INDEX",
           "price": 172,
-          "trade_type": "Buy",
+          "TradeType": "Buy",
           "quantity": 1800
         }
       ],

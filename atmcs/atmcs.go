@@ -25,6 +25,7 @@ type ATMcs struct {
 	GetCurrentTime    func() time.Time `json:"-"`
 	Holidays
 	StopLossHitChan chan bool `json:"-"`
+	TargetHitChan   chan bool `json:"-"`
 }
 
 type DurationWrapper struct {
@@ -109,7 +110,7 @@ func (obj *ATMcs) ReadErrors() []string {
 	return []string{}
 }
 func (obj *ATMcs) GetSleepDuration() time.Duration {
-	return time.Minute
+	return obj.SleepDuration.Duration
 }
 
 func (obj *ATMcs) LoadLocation() error {
@@ -147,6 +148,10 @@ func (obj *ATMcs) GetStopLossHitChan() <-chan bool {
 	return obj.StopLossHitChan
 }
 
+func (obj *ATMcs) GetTargetHitChan() <-chan bool {
+	return obj.TargetHitChan
+}
+
 func New(settingsFilePath string, currentTimeFunc func() time.Time) *ATMcs {
 	var obj ATMcs
 	obj.SetSettingsFilesPath(settingsFilePath)
@@ -172,12 +177,13 @@ func New(settingsFilePath string, currentTimeFunc func() time.Time) *ATMcs {
 		return nil
 	}
 	obj.SetTradeFilePath(obj.Settings.TradeFilePath)
-	if err := obj.LoadTradeFromJSON(); err != nil {
+	if err := obj.LoadFromJSON(); err != nil {
 		log.Println("error LoadTradeFromJSON() loading trade from JSON:", err.Error())
 		return nil
 	}
 
 	obj.StopLossHitChan = make(chan bool)
+	obj.TargetHitChan = make(chan bool)
 	obj.GetCurrentTime = currentTimeFunc
 	obj.EntrySatisfied = false
 	obj.ExitSatisfied = false

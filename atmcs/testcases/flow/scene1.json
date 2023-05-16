@@ -2,12 +2,8 @@
   "current_time": "2023-05-12T09:15:00+05:30",
   "tick_prices": [
     {
-      "time": "2023-12-30T21:59:59+05:30",
-      "price": 123
-    },
-    {
-      "time": "2023-12-30T22:05:59+05:30",
-      "price": 121
+      "time": "2023-05-12T09:58:00+05:30",
+      "price": 18248.37
     }
   ],
   "time_states": [
@@ -49,18 +45,94 @@
               "underlying_symbol": "NSE:NIFTY50-INDEX",
               "Price": 172,
               "TradeType": "Buy",
-              "Quantity": 3600
+              "Quantity": 1800
             }
           ],
           "ExitPositions": null,
           "TimeOfEntry": "2023-05-12T09:50:00+05:30",
           "TimeOfExit": "0001-01-01T00:00:00Z",
-          "TrailStopLossPrice": 5e-234,
+          "TrailStopLossPrice": 0,
           "StopLossPrice": 18195.05,
           "TargetPrice": 18248.37,
           "EntryPrice": 18209.7,
           "TradeType": "Buy",
           "IsMinTrailHit": false,
+          "IsStopLossHit": false
+        },
+        "SettingsFilesPath": ""
+      }
+    },
+    {
+      "time": "2023-05-12T09:59:00+05:30",
+      "atmcs_state": {
+        "SignalCPR": {
+          "Signal": "BUY",
+          "EntryPrice": 18209.7,
+          "StopLossPrice": 18195.05,
+          "TargetPrice": 18248.37,
+          "TargetLevels": null,
+          "CrossedLevels": null,
+          "Message": ""
+        },
+        "EntrySatisfied": true,
+        "ExitSatisfied": true,
+        "EntryMessage": "",
+        "ExitMessage": "",
+        "SleepDuration": 0,
+        "Trade": {
+          "InTrade": false,
+          "EntryPositions": [
+            {
+              "expiry": "2023-05-25T00:00:00+05:30",
+              "strike": 18300,
+              "type": "PE",
+              "symbol": "NSE:NIFTY50-INDEX",
+              "underlying_symbol": "NSE:NIFTY50-INDEX",
+              "Price": 130,
+              "TradeType": "Sell",
+              "Quantity": 3600
+            },
+            {
+              "expiry": "2023-06-29T00:00:00+05:30",
+              "strike": 18300,
+              "type": "PE",
+              "symbol": "NSE:NIFTY50-INDEX",
+              "underlying_symbol": "NSE:NIFTY50-INDEX",
+              "Price": 172,
+              "TradeType": "Buy",
+              "Quantity": 1800
+            }
+          ],
+          "ExitPositions": [
+            {
+              "expiry": "2023-05-25T00:00:00+05:30",
+              "strike": 18300,
+              "type": "PE",
+              "symbol": "NSE:NIFTY50-INDEX",
+              "underlying_symbol": "NSE:NIFTY50-INDEX",
+              "Price": 130.5,
+              "TradeType": "Buy",
+              "Quantity": 3600
+            },
+            {
+              "expiry": "2023-06-29T00:00:00+05:30",
+              "strike": 18300,
+              "type": "PE",
+              "symbol": "NSE:NIFTY50-INDEX",
+              "underlying_symbol": "NSE:NIFTY50-INDEX",
+              "Price": 170,
+              "TradeType": "Sell",
+              "Quantity": 1800
+            }
+          ],
+          "TimeOfEntry": "2023-05-12T09:50:00+05:30",
+          "TimeOfExit": "2023-05-12T09:59:00+05:30",
+          "TrailStopLossPrice": 0,
+          "StopLossPrice": 18195.05,
+          "TargetPrice": 18248.37,
+          "EntryPrice": 18209.7,
+          "TradeType": "Buy",
+          "IsMinTrailHit": true,
           "IsStopLossHit": false
         },
         "SettingsFilesPath": ""
