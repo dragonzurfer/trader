@@ -253,11 +253,11 @@ func TestIsEntryNotSatisfied(t *testing.T) {
 		if actualObjATMcs.ExitSatisfied == true {
 			t.Fatal("ExitSatisfied variable is set to true")
 		}
-		if actualObjATMcs.Trade.TargetPrice != math.SmallestNonzeroFloat64 {
-			t.Fatal("Target not set to min float64")
+		if actualObjATMcs.Trade.TargetPrice != 0 {
+			t.Fatal("Target not set to zero")
 		}
-		if actualObjATMcs.Trade.StopLossPrice != math.SmallestNonzeroFloat64 {
-			t.Fatal("SL not set to min float64")
+		if actualObjATMcs.Trade.StopLossPrice != 0 {
+			t.Fatal("SL not set to zero")
 		}
 	}
 

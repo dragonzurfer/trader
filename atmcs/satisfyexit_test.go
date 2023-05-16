@@ -25,8 +25,10 @@ func TestExitOnTick(t *testing.T) {
 	if atm == nil {
 		t.Fatalf("ATMcs object init fail")
 	}
+	atm.SetEntryStates()
 
 	// Set the trade type and entry price
+	atm.Trade.InTrade = true
 	atm.Trade.TradeType = executor.Buy
 	atm.Trade.EntryPrice = 100.0
 

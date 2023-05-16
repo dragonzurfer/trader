@@ -55,21 +55,21 @@
 			<div id="nav">
 				<select id="files">
 				
-				<option value="file0">github.com/dragonzurfer/trader/atmcs/atmcs.go (70.3%)</option>
+				<option value="file0">github.com/dragonzurfer/trader/atmcs/atmcs.go (70.1%)</option>
 				
 				<option value="file1">github.com/dragonzurfer/trader/atmcs/candleadapter.go (87.5%)</option>
 				
-				<option value="file2">github.com/dragonzurfer/trader/atmcs/entry.go (80.5%)</option>
+				<option value="file2">github.com/dragonzurfer/trader/atmcs/entry.go (80.8%)</option>
 				
-				<option value="file3">github.com/dragonzurfer/trader/atmcs/entrysatisfy.go (78.9%)</option>
+				<option value="file3">github.com/dragonzurfer/trader/atmcs/entrysatisfy.go (76.1%)</option>
 				
-				<option value="file4">github.com/dragonzurfer/trader/atmcs/exit.go (80.0%)</option>
+				<option value="file4">github.com/dragonzurfer/trader/atmcs/exit.go (85.1%)</option>
 				
-				<option value="file5">github.com/dragonzurfer/trader/atmcs/housekeeping.go (0.0%)</option>
+				<option value="file5">github.com/dragonzurfer/trader/atmcs/housekeeping.go (70.6%)</option>
 				
-				<option value="file6">github.com/dragonzurfer/trader/atmcs/loadtradejson.go (76.2%)</option>
+				<option value="file6">github.com/dragonzurfer/trader/atmcs/loadtradejson.go (33.3%)</option>
 				
-				<option value="file7">github.com/dragonzurfer/trader/atmcs/satisfyexit.go (84.8%)</option>
+				<option value="file7">github.com/dragonzurfer/trader/atmcs/satisfyexit.go (78.4%)</option>
 				
 				</select>
 			</div>
@@ -111,6 +111,7 @@ type ATMcs struct {
         Holidays
         StopLossHitChan chan bool `json:"-"`
         TargetHitChan   chan bool `json:"-"`
+        TrailChan       chan bool `json:"-"`
 }
 
 type DurationWrapper struct {
@@ -128,6 +129,7 @@ type Settings struct {
         Symbol               string          `json:"symbol"`
         TickSize             float64         `json:"tick_size"`
         SleepDuration        DurationWrapper `json:"sleep_duration"`
+        IsLoadFromJSON       bool            `json:"IsLoadFromJSON"`
 }
 
 func (d *DurationWrapper) UnmarshalJSON(data []byte) error <span class="cov8" title="1">{
@@ -237,6 +239,10 @@ func (obj *ATMcs) GetTargetHitChan() &lt;-chan bool <span class="cov8" title="1"
         return obj.TargetHitChan
 }</span>
 
+func (obj *ATMcs) GetTrailChan() &lt;-chan bool <span class="cov8" title="1">{
+        return obj.TrailChan
+}</span>
+
 func New(settingsFilePath string, currentTimeFunc func() time.Time) *ATMcs <span class="cov8" title="1">{
         var obj ATMcs
         obj.SetSettingsFilesPath(settingsFilePath)
@@ -262,13 +268,16 @@ func New(settingsFilePath string, currentTimeFunc func() time.Time) *ATMcs <span
                 return nil
         }</span>
         <span class="cov8" title="1">obj.SetTradeFilePath(obj.Settings.TradeFilePath)
-        if err := obj.LoadFromJSON(); err != nil </span><span class="cov0" title="0">{
-                log.Println("error LoadTradeFromJSON() loading trade from JSON:", err.Error())
-                return nil
-        }</span>
+        if obj.Settings.IsLoadFromJSON </span><span class="cov0" title="0">{
+                if err := obj.LoadFromJSON(); err != nil </span><span class="cov0" title="0">{
+                        log.Println("error LoadTradeFromJSON() loading trade from JSON:", err.Error())
+                        return nil
+                }</span>
+        }
 
         <span class="cov8" title="1">obj.StopLossHitChan = make(chan bool)
         obj.TargetHitChan = make(chan bool)
+        obj.TrailChan = make(chan bool)
         obj.GetCurrentTime = currentTimeFunc
         obj.EntrySatisfied = false
         obj.ExitSatisfied = false
@@ -345,6 +354,8 @@ func (obj *ATMcs) PaperTrade(tradeType executor.TradeType) <span class="cov8" ti
         obj.Trade.InTrade = true
         obj.Trade.EntryPositions = obj.makeEntryPositions(tradeType)
         obj.Trade.TimeOfEntry = obj.GetCurrentTime()
+        obj.Trade.IsMinTrailHit = false
+        obj.Trade.IsStopLossHit = false
 }</span>
 
 func (obj *ATMcs) makeEntryPositions(tradeType executor.TradeType) []trade.OptionPosition <span class="cov8" title="1">{
@@ -397,8 +408,8 @@ func (obj *ATMcs) makeEntryPositions(tradeType executor.TradeType) []trade.Optio
                 log.Println(err.Error())
                 return nil
         }</span>
-        <span class="cov8" title="1">sellPosition.Price = obj.GetAvgMarketDepth(bids)
-        buyPosition.Price = obj.GetAvgMarketDepth(asks)
+        <span class="cov8" title="1">sellPosition.Price, obj.Trade.DepthQuantityEntrySell = obj.GetAvgMarketDepth(bids)
+        buyPosition.Price, obj.Trade.DepthQuantityEntryBuy = obj.GetAvgMarketDepth(asks)
         entryPositions = append(entryPositions, sellPosition, buyPosition)
         return entryPositions</span>
 }
@@ -419,9 +430,9 @@ func (obj *ATMcs) MakeEntryPosition(symbol string, strike float64, expiry execut
         return optionPosition
 }</span>
 
-func (obj *ATMcs) GetAvgMarketDepth(depth []executor.MarketDepthLike) float64 <span class="cov8" title="1">{
+func (obj *ATMcs) GetAvgMarketDepth(depth []executor.MarketDepthLike) (float64, float64) <span class="cov8" title="1">{
         if len(depth) == 0 </span><span class="cov0" title="0">{
-                return 0
+                return 0, 0
         }</span>
 
         <span class="cov8" title="1">total := 0.0
@@ -433,7 +444,7 @@ func (obj *ATMcs) GetAvgMarketDepth(depth []executor.MarketDepthLike) float64 <s
         }</span>
 
         <span class="cov8" title="1">if totalVolumeOrders == 0 </span><span class="cov0" title="0">{
-                return 0
+                return 0, 0
         }</span>
 
         <span class="cov8" title="1">avgPrice := total / totalVolumeOrders
@@ -443,7 +454,7 @@ func (obj *ATMcs) GetAvgMarketDepth(depth []executor.MarketDepthLike) float64 <s
         }</span>
         <span class="cov8" title="1">decimalPlaces := countDecimalPlaces(obj.Settings.TickSize)
         roundedPrice = truncateDecimal(roundedPrice, decimalPlaces)
-        return roundedPrice</span>
+        return roundedPrice, totalVolumeOrders</span>
 }
 
 func GetBids(broker executor.BrokerLike, pos trade.OptionPosition) ([]executor.MarketDepthLike, error) <span class="cov8" title="1">{
@@ -571,7 +582,6 @@ import (
         "errors"
         "fmt"
         "log"
-        "math"
         "time"
 
         cpr "github.com/dragonzurfer/strategy/CPR"
@@ -601,23 +611,19 @@ func (obj *ATMcs) SetSignal() error <span class="cov8" title="1">{
 
 func (obj *ATMcs) SetEntryStates() <span class="cov8" title="1">{
         if obj.SignalCPR.Signal == cpr.Neutral </span><span class="cov8" title="1">{
-                obj.EntrySatisfied = false
-                obj.Trade.TradeType = executor.Nuetral
-                obj.Trade.TargetPrice = math.SmallestNonzeroFloat64
-                obj.Trade.StopLossPrice = math.SmallestNonzeroFloat64
                 return
         }</span>
-        <span class="cov8" title="1">obj.EntrySatisfied = true
-        obj.ExitSatisfied = false
-        obj.Trade.TargetPrice = obj.SignalCPR.TargetPrice
-        obj.Trade.StopLossPrice = obj.SignalCPR.StopLossPrice
+        <span class="cov8" title="1">obj.Trade.StopLossPrice = obj.SignalCPR.StopLossPrice
         obj.Trade.EntryPrice = obj.SignalCPR.EntryPrice
+        obj.Trade.TargetPrice = obj.SignalCPR.TargetPrice
         switch obj.SignalCPR.Signal </span>{
         case cpr.Buy:<span class="cov8" title="1">
                 obj.Trade.TradeType = executor.Buy</span>
-        case cpr.Sell:<span class="cov8" title="1">
+        case cpr.Sell:<span class="cov0" title="0">
                 obj.Trade.TradeType = executor.Sell</span>
         }
+        <span class="cov8" title="1">obj.ExitSatisfied = false
+        obj.EntrySatisfied = true</span>
 }
 
 func (obj *ATMcs) GetCandles() (cpr.CPRCandles, cpr.CPRCandles, error) <span class="cov8" title="1">{
@@ -731,9 +737,18 @@ func (obj *ATMcs) ExitPaper() <span class="cov8" title="1">{
         }</span>
 
         // Clear the current trade
-        <span class="cov8" title="1">obj.Trade.InTrade = false
-        obj.Trade.ExitPositions = exitPositions
-        obj.Trade.TimeOfExit = obj.GetCurrentTime()</span>
+        <span class="cov8" title="1">obj.Trade.ExitPositions = exitPositions
+        obj.Trade.InTrade = false
+        obj.Trade.TimeOfExit = obj.GetCurrentTime()
+        obj.Trade.StopLossPrice = 0
+        obj.Trade.EntryPrice = 0
+        obj.Trade.TargetPrice = 0
+        obj.Trade.TradeType = executor.Nuetral
+        obj.Trade.IsMinTrailHit = false
+        obj.Trade.IsStopLossHit = true
+        obj.ExitSatisfied = true
+        obj.EntrySatisfied = false</span>
+
 }
 
 func (obj *ATMcs) MakeExitPositions() ([]trade.OptionPosition, error) <span class="cov8" title="1">{
@@ -767,8 +782,16 @@ func (obj *ATMcs) MakePositionExit(entryPosition trade.OptionPosition) (trade.Op
                 return exitPosition, errors.New("failed to MakeExitPosition():" + err.Error())
         }</span>
 
-        <span class="cov8" title="1">currentPrice := obj.GetAvgMarketDepth(depth)
-        if currentPrice == 0 </span><span class="cov0" title="0">{
+        <span class="cov8" title="1">currentPrice, depthQuantity := obj.GetAvgMarketDepth(depth)
+        if entryPosition.TradeType == executor.Buy </span><span class="cov8" title="1">{
+                obj.Trade.DepthQuantityExitBuy = depthQuantity
+        }</span>
+
+        <span class="cov8" title="1">if entryPosition.TradeType == executor.Sell </span><span class="cov8" title="1">{
+                obj.Trade.DepthQuantityExitSell = depthQuantity
+        }</span>
+
+        <span class="cov8" title="1">if currentPrice == 0 </span><span class="cov0" title="0">{
                 return exitPosition, fmt.Errorf("could not get exit price for %v", entryPosition.GetOptionSymbol())
 
         }</span>
@@ -803,29 +826,121 @@ func reverseTradeType(tradeType executor.TradeType) executor.TradeType <span cla
 		
 		<pre class="file" id="file5" style="display: none">package atmcs
 
-func (obj *ATMcs) GetEntryMessage() string <span class="cov0" title="0">{
-        return ""
+import (
+        "fmt"
+        "strings"
+)
+
+func (obj *ATMcs) GetEntryMessage() string <span class="cov8" title="1">{
+        obj.SetEntryMessage()
+        return obj.EntryMessage
 }</span>
 
-func (obj *ATMcs) GetExitMessage() string <span class="cov0" title="0">{
-        return ""
+func (obj *ATMcs) GetExitMessage() string <span class="cov8" title="1">{
+        obj.SetExitMessage()
+        return obj.ExitMessage
 }</span>
 
-func (obj *ATMcs) GetTradeCSV() []string <span class="cov0" title="0">{
-        return []string{""}
-}</span>
+func (obj *ATMcs) SetEntryMessage() <span class="cov8" title="1">{
+        entryPositions := obj.Trade.EntryPositions
+        trade := obj.Trade
+
+        var messages []string
+        underLyingEntryMsg := fmt.Sprintf(
+                "%v %v\nEntry: %.2f\nSL: %.2f\nTarget: %.2f\n",
+                obj.Symbol,
+                obj.Trade.TradeType,
+                obj.Trade.EntryPrice,
+                obj.Trade.StopLossPrice,
+                obj.Trade.TargetPrice,
+        )
+        messages = append(messages, underLyingEntryMsg)
+        for _, position := range entryPositions </span><span class="cov8" title="1">{
+                message := fmt.Sprintf(
+                        "%v %v at price %.2f\nexpiry: %v\nquantity: %d",
+                        position.GetStrike(),
+                        position.GetOptionType(),
+                        position.GetPrice(),
+                        position.GetExpiry().Format("2006-01-02"),
+                        position.GetQuantity(),
+                )
+                messages = append(messages, message)
+        }</span>
+
+        <span class="cov8" title="1">entryTimeMsg := fmt.Sprintf("Entry Time:%v", trade.TimeOfEntry.Format("2006-01-02 15:04:05"))
+        messages = append(messages, entryTimeMsg)
+
+        obj.EntryMessage = strings.Join(messages, "\n")</span>
+}
+
+func (obj *ATMcs) SetExitMessage() <span class="cov8" title="1">{
+        exitPositions := obj.Trade.ExitPositions
+        trade := obj.Trade
+
+        var messages []string
+        for _, position := range exitPositions </span><span class="cov8" title="1">{
+                message := fmt.Sprintf(
+                        "Exit %v %v at price %.2f\nexpiry: %v\nquantity: %d",
+                        position.GetStrike(),
+                        position.GetOptionType(),
+                        position.GetPrice(),
+                        position.GetExpiry().Format("2006-01-02"),
+                        position.GetQuantity(),
+                )
+                messages = append(messages, message)
+        }</span>
+
+        <span class="cov8" title="1">exitTimeMsg := fmt.Sprintf("Exit Time:%v", trade.TimeOfExit.Format("2006-01-02 15:04:05"))
+        messages = append(messages, exitTimeMsg)
+
+        obj.ExitMessage = strings.Join(messages, "\n")</span>
+}
 
 func (obj *ATMcs) GetCSVTradeEntry() []string <span class="cov0" title="0">{
-        return []string{""}
-}</span>
+        entry := obj.Trade.EntryPositions
+        entryStrings := make([]string, len(entry))
+
+        for i, position := range entry </span><span class="cov0" title="0">{
+                entryStrings[i] = fmt.Sprintf(
+                        "Enter Strike: %.2f, OptionType: %s, Price: %.2f, TradeType: %s, Quantity: %d, Expiry: %s, TimeOfEntry: %s, TimeOfExit: %s,Available Sell Qty: %.2f, Available BuyQty: %.2f",
+                        position.GetStrike(),
+                        position.GetOptionType(),
+                        position.GetPrice(),
+                        position.GetTradeType(),
+                        position.GetQuantity(),
+                        position.GetExpiry().Format("2006-01-02"),
+                        obj.Trade.TimeOfEntry.Format("2006-01-02 15:04:05"),
+                        obj.Trade.TimeOfExit.Format("2006-01-02 15:04:05"),
+                        obj.Trade.DepthQuantityEntrySell,
+                        obj.Trade.DepthQuantityEntryBuy,
+                )
+        }</span>
+
+        <span class="cov0" title="0">return entryStrings</span>
+}
 
 func (obj *ATMcs) GetCSVTradeExit() []string <span class="cov0" title="0">{
-        return []string{""}
-}</span>
+        exit := obj.Trade.ExitPositions
+        exitStrings := make([]string, len(exit))
 
-func (obj *ATMcs) GeTradeJSON() string <span class="cov0" title="0">{
-        return ""
-}</span>
+        for i, position := range exit </span><span class="cov0" title="0">{
+                exitStrings[i] = fmt.Sprintf(
+                        "Exit Strike: %.2f, OptionType: %s, Price: %.2f, TradeType: %s, Quantity: %d, Expiry: %s, TimeOfEntry: %s, TimeOfExit: %s,Available Sell Qty: %.2f, Available BuyQty: %.2f",
+                        position.GetStrike(),
+                        position.GetOptionType(),
+                        position.GetPrice(),
+                        position.GetTradeType(),
+                        position.GetQuantity(),
+                        position.GetExpiry().Format("2006-01-02"),
+                        obj.Trade.TimeOfEntry.Format("2006-01-02 15:04:05"),
+                        obj.Trade.TimeOfExit.Format("2006-01-02 15:04:05"),
+                        obj.Trade.DepthQuantityExitSell,
+                        obj.Trade.DepthQuantityExitBuy,
+                )
+        }</span>
+
+        <span class="cov0" title="0">return exitStrings</span>
+}
 </pre>
 		
 		<pre class="file" id="file6" style="display: none">package atmcs
@@ -838,7 +953,7 @@ import (
         "path/filepath"
 )
 
-func (obj *ATMcs) LoadFromJSON() error <span class="cov8" title="1">{
+func (obj *ATMcs) LoadFromJSON() error <span class="cov0" title="0">{
         fullPath := filepath.Join(obj.Settings.TradeFilePath)
 
         // Open the file
@@ -846,7 +961,7 @@ func (obj *ATMcs) LoadFromJSON() error <span class="cov8" title="1">{
         if err != nil </span><span class="cov0" title="0">{
                 return err
         }</span>
-        <span class="cov8" title="1">defer file.Close()
+        <span class="cov0" title="0">defer file.Close()
 
         // Read the file into a byte slice
         bytes, err := ioutil.ReadAll(file)
@@ -855,12 +970,12 @@ func (obj *ATMcs) LoadFromJSON() error <span class="cov8" title="1">{
         }</span>
 
         // Unmarshal the byte slice into the Trade object
-        <span class="cov8" title="1">err = json.Unmarshal(bytes, &amp;obj.Trade)
+        <span class="cov0" title="0">err = json.Unmarshal(bytes, &amp;obj.Trade)
         if err != nil </span><span class="cov0" title="0">{
                 return err
         }</span>
 
-        <span class="cov8" title="1">return nil</span>
+        <span class="cov0" title="0">return nil</span>
 }
 
 func (obj *ATMcs) LogTrade() error <span class="cov8" title="1">{
@@ -903,18 +1018,22 @@ func (obj *ATMcs) ExitOnTick(tickPrice float64) <span class="cov8" title="1">{
         if obj.InTrade() </span><span class="cov8" title="1">{
                 obj.SetMinTrail(tickPrice)
                 if obj.IsHitTickSL(tickPrice) </span><span class="cov8" title="1">{
-                        obj.StopLossHitChan &lt;- true
-                        obj.Trade.IsStopLossHit = true
+                        go func() </span><span class="cov8" title="1">{
+                                obj.StopLossHitChan &lt;- true
+                        }</span>()
+                        <span class="cov8" title="1">obj.Trade.IsStopLossHit = true
                         obj.ExitSatisfied = true
                         obj.Trade.TimeOfExit = obj.GetCurrentTime()
-                        return
-                }</span>
+                        return</span>
+                }
                 <span class="cov8" title="1">if obj.IsHitTickTarget(tickPrice) </span><span class="cov8" title="1">{
-                        obj.TargetHitChan &lt;- true
-                        obj.ExitSatisfied = true
+                        go func() </span><span class="cov8" title="1">{
+                                obj.TargetHitChan &lt;- true
+                        }</span>()
+                        <span class="cov8" title="1">obj.ExitSatisfied = true
                         obj.Trade.TimeOfExit = obj.GetCurrentTime()
-                        return
-                }</span>
+                        return</span>
+                }
         }
 }
 
@@ -924,7 +1043,7 @@ func (obj *ATMcs) IsHitTickSL(tickPrice float64) bool <span class="cov8" title="
         switch obj.Trade.TradeType </span>{
         case executor.Buy:<span class="cov8" title="1">
                 return tickPrice &lt;= obj.Trade.StopLossPrice</span>
-        case executor.Sell:<span class="cov8" title="1">
+        case executor.Sell:<span class="cov0" title="0">
                 return tickPrice &gt;= obj.Trade.StopLossPrice</span>
         }
         <span class="cov0" title="0">return false</span>
@@ -934,7 +1053,7 @@ func (obj *ATMcs) IsHitTickTarget(tickPrice float64) bool <span class="cov8" tit
         switch obj.Trade.TradeType </span>{
         case executor.Buy:<span class="cov8" title="1">
                 return tickPrice &gt;= obj.Trade.TargetPrice</span>
-        case executor.Sell:<span class="cov8" title="1">
+        case executor.Sell:<span class="cov0" title="0">
                 return tickPrice &lt;= obj.Trade.TargetPrice</span>
         }
         <span class="cov0" title="0">fmt.Println(tickPrice, obj.Trade.TargetPrice)
@@ -949,18 +1068,21 @@ func (obj *ATMcs) SetMinTrail(tickPrice float64) <span class="cov8" title="1">{
                 if tickPrice &gt; obj.Trade.EntryPrice </span><span class="cov8" title="1">{
                         priceChangePercent = (tickPrice - obj.Trade.EntryPrice) / obj.Trade.EntryPrice * 100
                 }</span>
-        } else<span class="cov8" title="1"> if obj.Trade.TradeType == executor.Sell </span><span class="cov8" title="1">{
+        } else<span class="cov0" title="0"> if obj.Trade.TradeType == executor.Sell </span><span class="cov0" title="0">{
                 // For a sell trade, we want the current price to be lower
-                if tickPrice &lt; obj.Trade.EntryPrice </span><span class="cov8" title="1">{
+                if tickPrice &lt; obj.Trade.EntryPrice </span><span class="cov0" title="0">{
                         priceChangePercent = (obj.Trade.EntryPrice - tickPrice) / obj.Trade.EntryPrice * 100
                 }</span>
         }
 
         <span class="cov8" title="1">if priceChangePercent &gt;= obj.Settings.MinTrailPercent </span><span class="cov8" title="1">{
-                if !obj.Trade.IsMinTrailHit </span><span class="cov0" title="0">{
+                if !obj.Trade.IsMinTrailHit </span><span class="cov8" title="1">{
                         obj.Trade.IsMinTrailHit = true
                         obj.Trade.StopLossPrice = obj.Trade.EntryPrice
-                }</span>
+                        go func() </span><span class="cov8" title="1">{
+                                obj.TrailChan &lt;- true
+                        }</span>()
+                }
         }
 }
 </pre>
