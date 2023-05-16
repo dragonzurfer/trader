@@ -20,6 +20,8 @@ type ExecutorLike interface {
 	GetTradeType() TradeType
 	ExitPaper()
 	ExitAccount()
+	LogTrade() error
+	LoadFromJSON() error
 }
 
 type Trader struct {
