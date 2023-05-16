@@ -26,6 +26,7 @@ type ATMcs struct {
 	Holidays
 	StopLossHitChan chan bool `json:"-"`
 	TargetHitChan   chan bool `json:"-"`
+	TrailChan       chan bool `json:"-"`
 }
 
 type DurationWrapper struct {
@@ -43,6 +44,7 @@ type Settings struct {
 	Symbol               string          `json:"symbol"`
 	TickSize             float64         `json:"tick_size"`
 	SleepDuration        DurationWrapper `json:"sleep_duration"`
+	IsLoadFromJSON       bool            `json:"IsLoadFromJSON"`
 }
 
 func (d *DurationWrapper) UnmarshalJSON(data []byte) error {
@@ -152,6 +154,10 @@ func (obj *ATMcs) GetTargetHitChan() <-chan bool {
 	return obj.TargetHitChan
 }
 
+func (obj *ATMcs) GetTrailChan() <-chan bool {
+	return obj.TrailChan
+}
+
 func New(settingsFilePath string, currentTimeFunc func() time.Time) *ATMcs {
 	var obj ATMcs
 	obj.SetSettingsFilesPath(settingsFilePath)
@@ -177,13 +183,16 @@ func New(settingsFilePath string, currentTimeFunc func() time.Time) *ATMcs {
 		return nil
 	}
 	obj.SetTradeFilePath(obj.Settings.TradeFilePath)
-	if err := obj.LoadFromJSON(); err != nil {
-		log.Println("error LoadTradeFromJSON() loading trade from JSON:", err.Error())
-		return nil
+	if obj.Settings.IsLoadFromJSON {
+		if err := obj.LoadFromJSON(); err != nil {
+			log.Println("error LoadTradeFromJSON() loading trade from JSON:", err.Error())
+			return nil
+		}
 	}
 
 	obj.StopLossHitChan = make(chan bool)
 	obj.TargetHitChan = make(chan bool)
+	obj.TrailChan = make(chan bool)
 	obj.GetCurrentTime = currentTimeFunc
 	obj.EntrySatisfied = false
 	obj.ExitSatisfied = false
