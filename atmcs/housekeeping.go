@@ -78,7 +78,7 @@ func (obj *ATMcs) GetCSVTradeEntry() []string {
 
 	for i, position := range entry {
 		entryStrings[i] = fmt.Sprintf(
-			"Type:Enter Strike: %.2f, OptionType: %s, Price: %.2f, TradeType: %s, Quantity: %d, Expiry: %s, TimeOfEntry: %s, TimeOfExit: %s,Available SellQty: %.2f, Available BuyQty: %.2f",
+			"Type:Enter, Strike: %.2f, OptionType: %s, Price: %.2f, TradeType: %s, Quantity: %d, Expiry: %s, TimeOfEntry: %s, TimeOfExit: %s,Available SellQty: %.2f, Available BuyQty: %.2f",
 			position.GetStrike(),
 			position.GetOptionType(),
 			position.GetPrice(),
@@ -101,7 +101,7 @@ func (obj *ATMcs) GetCSVTradeExit() []string {
 
 	for i, position := range exit {
 		exitStrings[i] = fmt.Sprintf(
-			"Type:Exit Strike: %.2f, OptionType: %s, Price: %.2f, TradeType: %s, Quantity: %d, Expiry: %s, TimeOfEntry: %s, TimeOfExit: %s,Available SellQty: %.2f, Available BuyQty: %.2f",
+			"Type:Exit, Strike: %.2f, OptionType: %s, Price: %.2f, TradeType: %s, Quantity: %d, Expiry: %s, TimeOfEntry: %s, TimeOfExit: %s,Available SellQty: %.2f, Available BuyQty: %.2f",
 			position.GetStrike(),
 			position.GetOptionType(),
 			position.GetPrice(),
