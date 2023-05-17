@@ -31,18 +31,17 @@ func (obj *ATMcs) SetEntryMessage() {
 	messages = append(messages, underLyingEntryMsg)
 	for _, position := range entryPositions {
 		message := fmt.Sprintf(
-			"%v %v at price %.2f\nexpiry: %v\nquantity: %d\ndepth Quant sell enter:%0.2f depth Quant buy enter:%0.2f",
+			"%v %v at price %.2f\nexpiry: %v\nquantity: %d\n",
 			position.GetStrike(),
 			position.GetOptionType(),
 			position.GetPrice(),
 			position.GetExpiry().Format("2006-01-02"),
 			position.GetQuantity(),
-			obj.Trade.DepthQuantityEntrySell,
-			obj.Trade.DepthQuantityEntryBuy,
 		)
 		messages = append(messages, message)
 	}
-
+	depthQuantMessage := fmt.Sprintf("depth Quant sell enter:%0.2f depth Quant buy enter:%0.2f", obj.Trade.DepthQuantityEntrySell, obj.Trade.DepthQuantityEntryBuy)
+	messages = append(messages, depthQuantMessage)
 	entryTimeMsg := fmt.Sprintf("Entry Time:%v", trade.TimeOfEntry.Format("2006-01-02 15:04:05"))
 	messages = append(messages, entryTimeMsg)
 
@@ -56,18 +55,17 @@ func (obj *ATMcs) SetExitMessage() {
 	var messages []string
 	for _, position := range exitPositions {
 		message := fmt.Sprintf(
-			"Exit %v %v at price %.2f\nexpiry: %v\nquantity: %d\ndepth Quant sell exit:%0.2f depth Quant buy exit:%0.2f",
+			"Exit %v %v at price %.2f\nexpiry: %v\nquantity: %d\n",
 			position.GetStrike(),
 			position.GetOptionType(),
 			position.GetPrice(),
 			position.GetExpiry().Format("2006-01-02"),
 			position.GetQuantity(),
-			obj.Trade.DepthQuantityExitSell,
-			obj.Trade.DepthQuantityExitBuy,
 		)
 		messages = append(messages, message)
 	}
-
+	depthQuantMessage := fmt.Sprintf("depth Quant sell enter:%0.2f depth Quant buy enter:%0.2f", obj.Trade.DepthQuantityEntrySell, obj.Trade.DepthQuantityEntryBuy)
+	messages = append(messages, depthQuantMessage)
 	exitTimeMsg := fmt.Sprintf("Exit Time:%v", trade.TimeOfExit.Format("2006-01-02 15:04:05"))
 	messages = append(messages, exitTimeMsg)
 
@@ -80,7 +78,7 @@ func (obj *ATMcs) GetCSVTradeEntry() []string {
 
 	for i, position := range entry {
 		entryStrings[i] = fmt.Sprintf(
-			"Enter Strike: %.2f, OptionType: %s, Price: %.2f, TradeType: %s, Quantity: %d, Expiry: %s, TimeOfEntry: %s, TimeOfExit: %s,Available Sell Qty: %.2f, Available BuyQty: %.2f",
+			"Type:Enter Strike: %.2f, OptionType: %s, Price: %.2f, TradeType: %s, Quantity: %d, Expiry: %s, TimeOfEntry: %s, TimeOfExit: %s,Available SellQty: %.2f, Available BuyQty: %.2f",
 			position.GetStrike(),
 			position.GetOptionType(),
 			position.GetPrice(),
@@ -103,7 +101,7 @@ func (obj *ATMcs) GetCSVTradeExit() []string {
 
 	for i, position := range exit {
 		exitStrings[i] = fmt.Sprintf(
-			"Exit Strike: %.2f, OptionType: %s, Price: %.2f, TradeType: %s, Quantity: %d, Expiry: %s, TimeOfEntry: %s, TimeOfExit: %s,Available Sell Qty: %.2f, Available BuyQty: %.2f",
+			"Type:Exit Strike: %.2f, OptionType: %s, Price: %.2f, TradeType: %s, Quantity: %d, Expiry: %s, TimeOfEntry: %s, TimeOfExit: %s,Available SellQty: %.2f, Available BuyQty: %.2f",
 			position.GetStrike(),
 			position.GetOptionType(),
 			position.GetPrice(),
