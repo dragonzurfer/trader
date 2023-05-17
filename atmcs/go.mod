@@ -3,7 +3,7 @@ module github.com/dragonzurfer/trader/atmcs
 go 1.18
 
 require (
-	github.com/dragonzurfer/strategy/CPR v0.0.0-20230512130832-1818fc128978
+	github.com/dragonzurfer/strategy/CPR v0.0.0-20230517072008-a60ed8691fb0
 	github.com/dragonzurfer/trader/executor v0.0.0-20230516071121-74d8ae45bf2b
 )
 
