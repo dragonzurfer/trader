@@ -14,6 +14,7 @@ func (obj *ATMcs) ExitOnTick(tickPrice float64) {
 	if obj.InTrade() {
 		obj.SetMinTrail(tickPrice)
 		if obj.IsHitTickSL(tickPrice) {
+			obj.ExitPaper()
 			go func() {
 				obj.StopLossHitChan <- true
 			}()
@@ -23,6 +24,7 @@ func (obj *ATMcs) ExitOnTick(tickPrice float64) {
 			return
 		}
 		if obj.IsHitTickTarget(tickPrice) {
+			obj.ExitPaper()
 			go func() {
 				obj.TargetHitChan <- true
 			}()

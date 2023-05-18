@@ -338,7 +338,8 @@ func TestFlow(t *testing.T) {
 	log.SetFlags(log.Lshortfile)
 
 	testCases := []string{
-		"scene5.json",
+		// "scene5.json",
+		"2023-05-18.json",
 		// Add more test case file names here
 	}
 	settings := []string{
@@ -481,7 +482,7 @@ func (scene *TestScenario) listenToChannels() {
 			if ok {
 				if slHit {
 					fmt.Println("Stop Loss hit!")
-					scene.atm.ExitPaper()
+					// scene.atm.ExitPaper()
 					return
 				} else {
 					fmt.Println("SL not hit")
@@ -495,7 +496,7 @@ func (scene *TestScenario) listenToChannels() {
 			if ok {
 				if targetHit {
 					fmt.Println("Target hit!")
-					scene.atm.ExitPaper()
+					// scene.atm.ExitPaper()
 					return
 				} else {
 					fmt.Println("target not hit")

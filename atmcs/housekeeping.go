@@ -64,7 +64,7 @@ func (obj *ATMcs) SetExitMessage() {
 		)
 		messages = append(messages, message)
 	}
-	depthQuantMessage := fmt.Sprintf("depth Quant sell enter:%0.2f depth Quant buy enter:%0.2f", obj.Trade.DepthQuantityEntrySell, obj.Trade.DepthQuantityEntryBuy)
+	depthQuantMessage := fmt.Sprintf("depth Quant sell enter:%0.2f depth Quant buy enter:%0.2f", obj.Trade.DepthQuantityExitSell, obj.Trade.DepthQuantityExitBuy)
 	messages = append(messages, depthQuantMessage)
 	exitTimeMsg := fmt.Sprintf("Exit Time:%v", trade.TimeOfExit.Format("2006-01-02 15:04:05"))
 	messages = append(messages, exitTimeMsg)
