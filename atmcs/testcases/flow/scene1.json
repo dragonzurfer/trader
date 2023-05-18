@@ -74,7 +74,7 @@
           "CrossedLevels": null,
           "Message": ""
         },
-        "EntrySatisfied": true,
+        "EntrySatisfied": false,
         "ExitSatisfied": true,
         "EntryMessage": "",
         "ExitMessage": "",
@@ -131,9 +131,9 @@
           "StopLossPrice": 18195.05,
           "TargetPrice": 18248.37,
           "EntryPrice": 18209.7,
-          "TradeType": "Buy",
-          "IsMinTrailHit": true,
-          "IsStopLossHit": false
+          "TradeType": "Neutral",
+          "IsMinTrailHit": false,
+          "IsStopLossHit": true
         },
         "SettingsFilesPath": ""
       }

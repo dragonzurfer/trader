@@ -338,8 +338,8 @@ func TestFlow(t *testing.T) {
 	log.SetFlags(log.Lshortfile)
 
 	testCases := []string{
-		// "scene5.json",
-		"2023-05-18.json",
+		"scene5.json",
+		// "2023-05-18.json",
 		// Add more test case file names here
 	}
 	settings := []string{

@@ -32,7 +32,35 @@ func (obj *ATMcs) ExitOnTick(tickPrice float64) {
 			obj.Trade.TimeOfExit = obj.GetCurrentTime()
 			return
 		}
+		if obj.IsUpdateMinTrail(tickPrice) {
+			go func() {
+				obj.TrailChan <- true
+			}()
+			return
+		}
 	}
+}
+func (obj *ATMcs) IsUpdateMinTrail(tickPrice float64) bool {
+	if !obj.Trade.IsMinTrailHit {
+		return false
+	}
+	switch obj.Trade.TradeType {
+	case executor.Buy:
+		if tickPrice >= obj.Trade.TrailStopLossPrice {
+			obj.Trade.StopLossPrice = obj.Trade.EntryPrice
+			return true
+		} else {
+			return false
+		}
+	case executor.Sell:
+		if tickPrice <= obj.Trade.TrailStopLossPrice {
+			obj.Trade.StopLossPrice = obj.Trade.EntryPrice
+			return true
+		} else {
+			return false
+		}
+	}
+	return false
 }
 
 // will be called while creating broker object
@@ -76,10 +104,12 @@ func (obj *ATMcs) SetMinTrail(tickPrice float64) {
 	if priceChangePercent >= obj.Settings.MinTrailPercent {
 		if !obj.Trade.IsMinTrailHit {
 			obj.Trade.IsMinTrailHit = true
-			obj.Trade.StopLossPrice = obj.Trade.EntryPrice
-			go func() {
-				obj.TrailChan <- true
-			}()
+			if obj.Trade.TradeType == executor.Buy {
+				obj.Trade.TrailStopLossPrice = obj.Trade.EntryPrice + (obj.Trade.EntryPrice - obj.Trade.StopLossPrice)
+			}
+			if obj.Trade.TradeType == executor.Sell {
+				obj.Trade.TrailStopLossPrice = obj.Trade.EntryPrice - (obj.Trade.StopLossPrice - obj.Trade.EntryPrice)
+			}
 		}
 	}
 }
