@@ -52,8 +52,14 @@ func TestExitOnTick(t *testing.T) {
 	case <-time.After(time.Second * 5):
 		t.Fatal("Timeout waiting for StopLossHitChan")
 	}
-
+	atm.SetEntryStates()
 	// Reset ExitSatisfied
+	atm.Trade.InTrade = true
+	atm.Trade.TradeType = executor.Buy
+	atm.Trade.EntryPrice = 100.0
+
+	// Test the case where stop loss should be hit
+	atm.Trade.StopLossPrice = 90.0
 	atm.ExitSatisfied = false
 
 	// Test the case where target should be hit
