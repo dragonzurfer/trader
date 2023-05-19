@@ -2,15 +2,13 @@ module github.com/dragonzurfer/trader/atmcs
 
 go 1.18
 
-require (
-	github.com/dragonzurfer/strategy/CPR v0.0.0-20230517072008-a60ed8691fb0
-	github.com/dragonzurfer/trader/executor v0.0.0-20230516071121-74d8ae45bf2b
-)
+require github.com/dragonzurfer/trader/executor v0.0.0-20230516071121-74d8ae45bf2b
 
 require (
 	github.com/dragonzurfer/fyersgo v1.0.2
 	github.com/dragonzurfer/fyersgo/api v0.0.0-20230506120707-342d6521bb57
 	github.com/dragonzurfer/revclose v1.0.2
+	github.com/dragonzurfer/strategy/CPR v0.0.0-20230519111457-46d225bd1d2d
 	github.com/stretchr/testify v1.7.0
 )
 
