@@ -44,6 +44,9 @@ func (obj *ATMcs) IsUpdateMinTrail(tickPrice float64) bool {
 	if !obj.Trade.IsMinTrailHit {
 		return false
 	}
+	if obj.Trade.StopLossPrice == obj.Trade.EntryPrice {
+		return false
+	}
 	switch obj.Trade.TradeType {
 	case executor.Buy:
 		if tickPrice >= obj.Trade.TrailStopLossPrice {
